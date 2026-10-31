@@ -27,3 +27,5 @@ Thumbs.db
 desktop.ini
 ~$*
 *.backup
+# Art to-do list written by tools/build-assets.py: kept locally, not published
+assets/STILL-NEEDED.md

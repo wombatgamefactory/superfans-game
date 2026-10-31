@@ -28,8 +28,8 @@ for (const id of ['board-full', 'icon-coffee', 'icon-selfie-green', 'icon-selfie
   'icon-swag-green', 'logo-title', 'cover-box']) need(id);
 assert.ok(!manifest.assets.some((a) => /after[-_ ]?party/i.test(a.id + a.file)), 'After Party art must not ship');
 
-// Every placeholder/missing entry points at a real labelled file and is listed in STILL-NEEDED.md.
-assert.ok(existsSync(join(root, 'assets/STILL-NEEDED.md')));
+// Every placeholder/missing entry points at a real labelled file. (STILL-NEEDED.md, the art to-do list
+// that build-assets.py writes, is kept locally and git-ignored; it is not checked here.)
 const gaps = manifest.assets.filter((a) => a.status !== 'real' && a.id !== 'placeholder-generic');
 assert.ok(gaps.length > 0);
 for (const g of gaps) assert.ok(g.file.startsWith('placeholders/'), `${g.id} should use a placeholder file`);
