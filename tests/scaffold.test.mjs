@@ -15,7 +15,7 @@ assert.ok(!/gtag|googletagmanager/i.test(html), 'index.html must not contain a g
 assert.ok(html.includes('id="app"'));
 
 const { CONFIG } = await import(pathToFileURL(join(root, 'src/ui/config.js')).href);
-assert.equal(CONFIG.GA4_MEASUREMENT_ID, '');
-assert.equal(CONFIG.BUG_REPORT_EMAIL, '');
+assert.ok(CONFIG.GA4_MEASUREMENT_ID === '' || /^G-[A-Z0-9]{4,}$/.test(CONFIG.GA4_MEASUREMENT_ID), 'GA4_MEASUREMENT_ID is empty or a G- id');
+assert.equal(typeof CONFIG.BUG_REPORT_EMAIL, 'string');
 assert.equal(typeof CONFIG.VERSION, 'string');
 console.log('scaffold ok');

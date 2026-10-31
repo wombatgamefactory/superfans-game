@@ -65,9 +65,9 @@ Exit code 0 means the replay matches the record.
 
 ### Release settings
 
-`src/ui/config.js` holds the values only the owner can supply. Both are empty on purpose, and an empty value switches its feature off:
+`src/ui/config.js` holds the values only the owner can supply. An empty value switches its feature off:
 
-- `GA4_MEASUREMENT_ID` - the Google Analytics 4 id (`G-XXXXXXXXXX`). Empty: no analytics script is loaded and nothing is sent. Add `?ga_debug=1` to the address to see events in GA4 DebugView once an id is set.
+- `GA4_MEASUREMENT_ID` - the Google Analytics 4 id (`G-XXXXXXXXXX`), set. Empty: no analytics script is loaded and nothing is sent. Local addresses (`localhost`, `127.0.0.1`, `file:`) never send, so local play and the tests stay out of the figures; add `?ga_debug=1` to the address to send from a local run and watch the events in GA4 DebugView.
 - `BUG_REPORT_EMAIL` - where the "Email this report" link in the Report a problem dialog goes. Empty: the email link is hidden (the report can still be downloaded).
 - `VERSION` - shown in game records and analytics.
 

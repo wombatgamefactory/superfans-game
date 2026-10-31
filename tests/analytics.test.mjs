@@ -27,13 +27,15 @@ const ok = (cond, msg) => {
   checks++;
 };
 
-// ---- 0. the shipped config is empty ----
-assert.equal(CONFIG.GA4_MEASUREMENT_ID, '', 'config.js must keep GA4_MEASUREMENT_ID empty');
-assert.equal(CONFIG.BUG_REPORT_EMAIL, '', 'config.js must keep BUG_REPORT_EMAIL empty');
+// ---- 0. the shipped config: an empty id or a well-formed GA4 id ----
+const SHIPPED_ID = CONFIG.GA4_MEASUREMENT_ID;
+assert.ok(SHIPPED_ID === '' || /^G-[A-Z0-9]{4,}$/.test(SHIPPED_ID), `config.js GA4_MEASUREMENT_ID must be empty or a G- id (got "${SHIPPED_ID}")`);
+assert.equal(typeof CONFIG.BUG_REPORT_EMAIL, 'string', 'config.js BUG_REPORT_EMAIL is a string');
 checks += 2;
 
 // ---- 1. unit ----
 {
+  CONFIG.GA4_MEASUREMENT_ID = '';
   const seen = [];
   setSink((e, p) => seen.push([e, p]));
   ok(analyticsOn() === false, 'analytics is off with an empty id');
@@ -49,7 +51,7 @@ checks += 2;
   CONFIG.GA4_MEASUREMENT_ID = 'G-TEST1234';
   // no sink, no document (Node): must not throw and must report false
   ok(track('x', {}) === false, 'with no sink and no DOM track() reports false and does not throw');
-  CONFIG.GA4_MEASUREMENT_ID = '';
+  CONFIG.GA4_MEASUREMENT_ID = SHIPPED_ID;
   _resetForTests();
   ok(clean(null) && Object.keys(clean(undefined)).length === 0, 'clean() is total');
 }
@@ -97,7 +99,9 @@ try {
     const requests = [];
     page.on('request', (r) => requests.push(r.url()));
     await page.evaluate(async () => {
+      const cfg = await import('/src/ui/config.js');
       const a = await import('/src/ui/analytics.js');
+      cfg.CONFIG.GA4_MEASUREMENT_ID = '';
       window.__events = [];
       a.setSink((e, p) => window.__events.push([e, p]));
     });
@@ -108,6 +112,28 @@ try {
     ok(!requests.some((u) => /googletagmanager|google-analytics/.test(u)), 'no request to Google while the id is empty');
     ok((await page.locator('script[src*="googletagmanager"]').count()) === 0, 'no gtag script tag');
     ok(await page.evaluate(() => typeof window.gtag === 'undefined'), 'no window.gtag');
+    assert.deepEqual(errors, [], errors.join(' | '));
+    await page.close();
+  }
+
+  // ---- 2b. the shipped id on a local address without ?ga_debug=1: nothing reaches Google ----
+  {
+    const { page, errors } = await openPage(browser, server, 'seats=m,e&seed=35&speed=instant&autostart=0');
+    const google = [];
+    await page.route(/googletagmanager|google-analytics/, (route) => {
+      google.push(route.request().url());
+      route.fulfill({ status: 200, contentType: 'text/javascript', body: '' });
+    });
+    await page.evaluate(async () => {
+      const cfg = await import('/src/ui/config.js');
+      if (!cfg.CONFIG.GA4_MEASUREMENT_ID) cfg.CONFIG.GA4_MEASUREMENT_ID = 'G-TEST1234';
+    });
+    await page.click('[data-start]');
+    await page.waitForFunction(() => window.__sf.screen === 'end', null, { timeout: 120000 });
+    ok(await page.evaluate(async () => (await import('/src/ui/analytics.js')).localVisit()), 'the test server counts as a local visit');
+    ok(google.length === 0, `no request to Google from a local address (got ${google.length})`);
+    ok((await page.locator('script[src*="googletagmanager"]').count()) === 0, 'no gtag script tag on a local address');
+    ok(await page.evaluate(() => typeof window.gtag === 'undefined'), 'no window.gtag on a local address');
     assert.deepEqual(errors, [], errors.join(' | '));
     await page.close();
   }

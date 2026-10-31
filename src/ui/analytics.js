@@ -11,6 +11,9 @@
 // seed, a free-text field or a bug report. clean() drops anything that is not a
 // number, a boolean or a short string, and cuts strings at 100 characters.
 //
+// Local visits (localhost, 127.0.0.1, ::1, *.local, file:) send nothing unless the
+// address has ?ga_debug=1, so development and the test suite never reach GA.
+//
 // track() never throws: analytics must not be able to cost anybody a turn.
 //
 // Test hook: setSink(fn) sends the cleaned events to fn instead of gtag, so the
@@ -67,6 +70,18 @@ export function clean(params) {
   return out;
 }
 
+/** ?ga_debug=1 on the page address (GA4 DebugView, and the one way to send from a local address). */
+function debugVisit() {
+  return typeof location !== 'undefined' && /[?&]ga_debug=1/.test(location.search);
+}
+
+/** A development or test address: nothing is sent from here without ?ga_debug=1. */
+export function localVisit() {
+  if (typeof location === 'undefined') return false;
+  const h = String(location.hostname || '').toLowerCase();
+  return location.protocol === 'file:' || h === '' || h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || h.endsWith('.local');
+}
+
 function inject(id) {
   if (injected) return true;
   if (typeof document === 'undefined') return false;
@@ -79,7 +94,7 @@ function inject(id) {
   window.gtag('js', new Date());
   const config = { anonymize_ip: true };
   // ?ga_debug=1 on the page address switches GA4 DebugView on for this visit (setup doc, "Verify").
-  if (typeof location !== 'undefined' && /[?&]ga_debug=1/.test(location.search)) config.debug_mode = true;
+  if (debugVisit()) config.debug_mode = true;
   window.gtag('config', id, config);
   const script = document.createElement('script');
   script.async = true;
@@ -101,6 +116,7 @@ export function track(event, params = {}) {
       sink(String(event), cleaned);
       return true;
     }
+    if (localVisit() && !debugVisit()) return false;
     if (!inject(id)) return false;
     window.gtag('event', String(event), cleaned);
     return true;
