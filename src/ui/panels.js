@@ -79,7 +79,14 @@ export function renderTopbar(ctx) {
       })
       .join('');
     const names = entries.map((s) => celebrityCard(s.card).name).join(' and ');
-    return `<div class="sf-hour${h < state.hour ? ' is-done' : ''}${h === state.hour ? ' is-current' : ''}" title="Hour ${h}: ${escapeHtml(names)}">
+    // Hours still to come: click to show or hide their routes on the board (main.js).
+    const toggle = h >= state.hour && entries.length && ctx.routeShown && !view.walk && state.phase !== 'final' && state.phase !== 'ended';
+    if (!toggle) {
+      return `<div class="sf-hour${h < state.hour ? ' is-done' : ''}${h === state.hour ? ' is-current' : ''}" title="Hour ${h}: ${escapeHtml(names)}">
+      <span class="sf-hour__num">${h}</span>${faces}</div>`;
+    }
+    const on = entries.every((s) => ctx.routeShown(s.card));
+    return `<div class="sf-hour${h === state.hour ? ' is-current' : ''}${on ? ' is-route-shown' : ''}" data-route-toggle="${entries.map((s) => escapeHtml(s.card)).join(',')}" role="button" tabindex="0" aria-pressed="${on}" aria-label="Hour ${h}: ${escapeHtml(names)}. ${on ? 'Hide' : 'Show'} the route on the board" title="Hour ${h}: ${escapeHtml(names)} - click to ${on ? 'hide' : 'show'} the route">
       <span class="sf-hour__num">${h}</span>${faces}</div>`;
   });
   const phase = view.walk ? 'walk' : state.phase === 'final' || state.phase === 'ended' ? 'walk' : state.phase === 'setup' ? 'coffeeBreak' : state.phase;
@@ -215,6 +222,18 @@ function myStatsHtml(ctx) {
 
 // ---- This Hour ---------------------------------------------------------------------
 
+/** Route toggles work while no Walk is playing and the game is not in final scoring. */
+function canToggle(ctx) {
+  return !!ctx.routeShown && !ctx.view.walk && ctx.state.phase !== 'final' && ctx.state.phase !== 'ended';
+}
+
+/** A small "Show route / Hide route" switch after a route's hall list. */
+function routeButton(ctx, entry) {
+  if (!canToggle(ctx)) return '';
+  const on = ctx.routeShown(entry.card);
+  return ` <button type="button" class="sf-route-btn${on ? ' is-route-shown' : ''}" data-route-toggle="${escapeHtml(entry.card)}" aria-pressed="${on}">${on ? 'Hide route' : 'Show route'}</button>`;
+}
+
 function nowPanel(ctx) {
   const { state } = ctx;
   const hour = Math.min(state.hour, 5);
@@ -233,12 +252,19 @@ function nowPanel(ctx) {
         <div class="sf-now__name">${escapeHtml(c.name)}</div>
         <div class="sf-now__facts">
           <div class="sf-now__fact"><span class="sf-chip" style="background:var(--cc);color:#fff">${main.colour} &middot; ${SYMBOL_WORD[main.colour]}</span><span class="sf-chip">+${c.coffee} coffee at Coffee Break</span></div>
-          <div class="sf-route-text">${c.route.map((id) => escapeHtml(hallName(id))).join(' <i>&rarr;</i> ')}</div>
+          <div class="sf-route-text">${c.route.map((id) => escapeHtml(hallName(id))).join(' <i>&rarr;</i> ')}${routeButton(ctx, main)}</div>
           <div class="sf-now__fact">${art(ICON.trophy, { alt: '' })}<span class="sf-now__method">${escapeHtml(c.scoringText)}</span></div>
-          ${second ? `<div class="sf-now__fact"><span class="sf-chip sf-cc--${second.colour}" style="background:var(--cc);color:#fff">then ${escapeHtml(celebrityCard(second.card).name)}</span><span class="sf-route-text">${celebrityCard(second.card).route.map((id) => escapeHtml(hallName(id))).join(' <i>&rarr;</i> ')}</span></div>` : ''}
+          ${second ? `<div class="sf-now__fact"><span class="sf-chip sf-cc--${second.colour}" style="background:var(--cc);color:#fff">then ${escapeHtml(celebrityCard(second.card).name)}</span><span class="sf-route-text">${celebrityCard(second.card).route.map((id) => escapeHtml(hallName(id))).join(' <i>&rarr;</i> ')}${routeButton(ctx, second)}</span></div>` : ''}
           <div class="sf-also">${others
-            .map((f) => `<span class="sf-also__item sf-cc--${f.colour}">${art(celebrityCard(f.card).portrait, { cls: 'sf-medallion', style: 'width:28px;height:28px;border-width:2px', alt: '' })}Hour ${f.hour}: ${escapeHtml(celebrityCard(f.card).name)}</span>`)
+            .map((f) => {
+              const name = celebrityCard(f.card).name;
+              const portrait = art(celebrityCard(f.card).portrait, { cls: 'sf-medallion', style: 'width:28px;height:28px;border-width:2px', alt: '' });
+              if (!canToggle(ctx)) return `<span class="sf-also__item sf-cc--${f.colour}">${portrait}Hour ${f.hour}: ${escapeHtml(name)}</span>`;
+              const on = ctx.routeShown(f.card);
+              return `<button type="button" class="sf-also__item sf-also__item--toggle sf-cc--${f.colour}${on ? ' is-route-shown' : ''}" data-route-toggle="${escapeHtml(f.card)}" aria-pressed="${on}" title="Click to ${on ? 'hide' : 'show'} ${escapeHtml(name)}'s route on the board">${portrait}Hour ${f.hour}: ${escapeHtml(name)}</button>`;
+            })
             .join('')}</div>
+          ${canToggle(ctx) ? '<div class="sf-route-hint">Click any celebrity (here, on the board or in the Hours at the top) to show or hide their route.</div>' : ''}
         </div>
       </div>
     </div>

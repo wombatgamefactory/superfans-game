@@ -2094,3 +2094,30 @@ ul.sf-htp__acts { list-style: none; padding: 0; grid-template-columns: repeat(au
   .sf-hero__frame::after { display: none; }
   .sf-players .sf-lanyard__badge { animation: none !important; transform: none !important; }
 }
+
+/* ---- Celebrity route toggles: click a celebrity (board figure, This Hour list, top-bar Hour) to show or hide its route ---- */
+.sf-celeb.is-route-shown:not(.is-legal):not(.is-selected) { filter: drop-shadow(0 0 0.4cqw #fff) drop-shadow(0 0 0.9cqw var(--cc)); }
+.sf-celeb[data-route-toggle]:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; border-radius: 1cqw; }
+.sf-route--numbered .sf-route__start { r: 8; }
+.sf-route__hour { font: 900 10px/1 var(--font-ui); fill: var(--cc); pointer-events: none; }
+.sf-hour[data-route-toggle] { cursor: pointer; }
+.sf-hour[data-route-toggle]:hover { filter: brightness(1.06); }
+.sf-hour[data-route-toggle]:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }
+.sf-hour.is-route-shown { box-shadow: var(--clay-drop), inset 0 0 0 3px var(--hi); }
+.sf-hour.is-current.is-route-shown { box-shadow: 0 3px 0 #5a33ad, inset 0 0 0 3px var(--hi); }
+.sf-also { flex-wrap: wrap; }
+.sf-also__item--toggle {
+  appearance: none; border: 2px solid transparent; border-radius: var(--r-pill);
+  background: transparent; padding: 2px 10px 2px 2px; cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft);
+}
+.sf-also__item--toggle:hover { background: var(--paper-2); }
+.sf-also__item--toggle.is-route-shown { border-color: var(--cc); color: var(--ink); background: var(--cc-soft, var(--paper-2)); }
+.sf-also__item--toggle:focus-visible, .sf-route-btn:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }
+.sf-route-btn {
+  margin-left: 6px; padding: 3px 9px; border: 2px solid var(--cc, var(--line)); border-radius: var(--r-pill);
+  background: #fff; color: var(--ink); cursor: pointer;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 800; line-height: 1.2;
+}
+.sf-route-btn.is-route-shown { background: var(--cc, var(--ink)); color: #fff; }
+.sf-route-hint { margin-top: 4px; font-size: var(--fs-xs); color: var(--ink-soft); }

@@ -182,6 +182,7 @@ function buildCtx() {
     thinking: !isHuman && !over && !view.walk && toAct !== null ? toAct : null,
     tags: new Map(),
     routes: [],
+    routeShown: (card) => routeShown(state, card),
   };
   // tags on halls while a hall is being picked
   if (active) {
@@ -217,13 +218,44 @@ function capacityHalls(state) {
   return state.crew.length ? [...new Set(state.crew.filter((c) => c.hall).map((c) => c.hall))] : [];
 }
 
+// ---- celebrity routes: shown by default for this Hour, switched on or off by clicking a celebrity ----
+
+/** The routes drawn without any clicks: this Hour's celebrities on the board, during the Coffee Break and the Floor. */
+function defaultRouteCards(state) {
+  if (state.phase !== 'floor' && state.phase !== 'coffeeBreak') return [];
+  return slotsOfHour(state, state.hour).filter((e) => e.status === 'onBoard').map((e) => e.card);
+}
+
+function routeShown(state, card) {
+  if (view.routes.on.has(card)) return true;
+  if (view.routes.off.has(card)) return false;
+  return defaultRouteCards(state).includes(card);
+}
+
+/** Shows the routes of `cards` (all of them) unless they are all shown already, in which case hides them. */
+function toggleRoutes(cards) {
+  if (!app.state || view.walk) return;
+  const state = app.state;
+  const show = !cards.every((c) => routeShown(state, c));
+  const defaults = defaultRouteCards(state);
+  for (const c of cards) {
+    view.routes.on.delete(c);
+    view.routes.off.delete(c);
+    if (show !== defaults.includes(c)) (show ? view.routes.on : view.routes.off).add(c);
+  }
+  render();
+}
+
 function boardCtx(ctx) {
   const state = ctx.state;
   const routes = [];
   if (view.walk) {
     for (const w of view.walk.routes) routes.push({ card: w.card, colour: w.colour, doneTo: w.doneTo, preview: false });
-  } else if (state.phase === 'floor' || state.phase === 'coffeeBreak') {
-    for (const e of slotsOfHour(state, state.hour)) if (e.status === 'onBoard') routes.push({ card: e.card, colour: e.colour, doneTo: 0, preview: true });
+  } else if (state.phase !== 'final' && state.phase !== 'ended') {
+    // future Hours first, so this Hour's route is drawn on top
+    const shown = state.schedule.filter((e) => e.status !== 'done' && routeShown(state, e.card));
+    shown.sort((a, b) => (a.hour === state.hour) - (b.hour === state.hour) || b.hour - a.hour);
+    for (const e of shown) routes.push({ card: e.card, colour: e.colour, hour: e.hour, doneTo: 0, preview: true });
   }
   const picked = ctx.pending.picked.find((k) => kindOfKey(k) === 'crew');
   const sourceCrew = picked ? crewById(ctx.real, valueOfKey(picked)) : null;
@@ -852,9 +884,17 @@ function onClick(e) {
   // board targets: the innermost target that fits the current step wins
   const chain = [];
   for (let el = t.closest('[data-target]'); el; el = el.parentElement ? el.parentElement.closest('[data-target]') : null) chain.push(el.dataset.target);
-  if (!chain.length) return;
+  const routeEl = t.closest('[data-route-toggle]');
+  if (!chain.length && !routeEl) return;
   const ctx = buildCtx();
   const here = ctx.targets.active ? stepOf(ctx.targets.entries, ctx.pending.picked) : null;
+  // A celebrity click shows or hides its route, unless the current action wants that click
+  // (a card asking you to choose a celebrity, or a legal hall the celebrity stands in).
+  if (routeEl && !(here && (here.kinds.has('celeb') || chain.some((k) => here.next.has(k))))) {
+    toggleRoutes(routeEl.dataset.routeToggle.split(','));
+    return;
+  }
+  if (!chain.length) return;
   let key = chain[0];
   if (here) {
     key = chain.find((k) => here.next.has(k)) ?? chain.find((k) => here.kinds.has(kindOfKey(k))) ?? chain[0];
@@ -900,6 +940,12 @@ function onKey(e) {
       render();
       e.preventDefault();
     }
+    return;
+  }
+  // a celebrity (board figure or schedule Hour) that is not an action target: Enter shows or hides its route
+  if ((e.key === 'Enter' || e.key === ' ') && e.target instanceof Element && e.target.matches('[data-route-toggle][role="button"]:not(.is-legal):not(.is-illegal):not(.is-dimmed):not(.is-selected)')) {
+    e.preventDefault();
+    toggleRoutes(e.target.dataset.routeToggle.split(','));
     return;
   }
   if ((e.key === 'Enter' || e.key === ' ') && e.target instanceof Element && e.target.matches('[data-target][role="button"]')) {

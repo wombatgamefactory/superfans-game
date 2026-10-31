@@ -125,8 +125,15 @@ function hallHtml(state, h, ctx) {
     const ckey = `celeb:${f.card}`;
     const ccls = classer(ckey);
     if (ccls) classes.push(ccls);
+    // Not an action target: clicking the figure shows or hides its route (main.js).
+    const shown = ctx.shownRoutes.has(f.card);
+    if (shown) classes.push('is-route-shown');
+    const toggle = interactive(ccls)
+      ? targetAttrs(ckey, ccls, `${card.name}, Hour ${f.hour}`)
+      : `${targetAttrs(ckey, ccls, '')} tabindex="0" role="button" aria-pressed="${shown}" aria-label="${escapeHtml(`${card.name}, Hour ${f.hour}: ${shown ? 'hide' : 'show'} route`)}"`;
+    const tip = interactive(ccls) ? `${card.name} (Hour ${f.hour})` : `${card.name} (Hour ${f.hour}) - click to ${shown ? 'hide' : 'show'} the route`;
     pieces.push(
-      `<div class="${classes.join(' ')}" style="left:${5 + i * 34}%"${targetAttrs(ckey, ccls, `${card.name}, Hour ${f.hour}`)} title="${escapeHtml(`${card.name} (Hour ${f.hour})`)}">
+      `<div class="${classes.join(' ')}" style="left:${5 + i * 34}%" data-route-toggle="${escapeHtml(f.card)}"${toggle} title="${escapeHtml(tip)}">
         ${art('figure-celebrity-neutral', { cls: 'sf-celeb__figure', alt: '' })}
         ${art(card.portrait, { cls: 'sf-celeb__medallion', alt: card.name })}
         <span class="sf-celeb__symbol"></span></div>`,
@@ -175,28 +182,35 @@ function ropeHtml(state, r, classer) {
  */
 export function routeSvg(routes) {
   if (!routes.length) return '';
-  const body = routes
-    .map((r, n) => {
-      const card = celebrityCard(r.card);
-      const pts = card.route.map(centre);
-      const d = (arr) => `M${arr.map((p) => p.join(' ')).join(' L')}`;
-      const done = r.doneTo > 0 ? `<path class="sf-route__casing" d="${d(pts.slice(0, r.doneTo + 1))}"/><path class="sf-route__done" d="${d(pts.slice(0, r.doneTo + 1))}"/>` : '';
-      const rest = pts.slice(r.doneTo || 0);
-      const [ex, ey] = pts[pts.length - 1];
-      const [sx, sy] = pts[0];
-      const off = (n % 2) * 6 - 3; // two routes in one picture do not lie exactly on each other
-      return `<g class="sf-cc--${r.colour}${r.preview ? ' sf-route--preview' : ''}" transform="translate(${off} ${off})">
+  // Two layers: every route's line first, then every start and end circle on top, so
+  // one route's line never hides another route's Hour number.
+  const lines = [];
+  const marks = [];
+  routes.forEach((r, n) => {
+    const card = celebrityCard(r.card);
+    const pts = card.route.map(centre);
+    const d = (arr) => `M${arr.map((p) => p.join(' ')).join(' L')}`;
+    const done = r.doneTo > 0 ? `<path class="sf-route__casing" d="${d(pts.slice(0, r.doneTo + 1))}"/><path class="sf-route__done" d="${d(pts.slice(0, r.doneTo + 1))}"/>` : '';
+    const rest = pts.slice(r.doneTo || 0);
+    const [ex, ey] = pts[pts.length - 1];
+    const [sx, sy] = pts[0];
+    const off = ((n % 4) - 1.5) * 4; // up to four routes side by side do not lie exactly on each other
+    const cls = `sf-cc--${r.colour}${r.preview ? ' sf-route--preview' : ''}${r.hour ? ' sf-route--numbered' : ''}`;
+    const hourLabel = r.hour ? `<text class="sf-route__hour" x="${sx}" y="${sy}" text-anchor="middle" dominant-baseline="central">${r.hour}</text>` : '';
+    lines.push(`<g class="${cls}" transform="translate(${off} ${off})">
         <defs><marker id="arr-${n}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--cc)"/></marker></defs>
         ${done}
         <path class="sf-route__casing" d="${d(rest)}"/>
         <path class="sf-route__line ${r.preview ? '' : 'sf-route__march'}" d="${d(rest)}" marker-mid="url(#arr-${n})"/>
+      </g>`);
+    marks.push(`<g class="${cls}" transform="translate(${off} ${off})">
         <circle class="sf-route__start" cx="${sx}" cy="${sy}" r="7"/>
         <circle class="sf-route__end" cx="${ex}" cy="${ey}" r="9"/>
         <path d="M${ex - 4} ${ey} l3 3 l6 -6" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>`;
-    })
-    .join('');
-  return `<svg class="sf-board__overlay" viewBox="0 0 328 328" aria-hidden="true">${body}</svg>`;
+        ${hourLabel}
+      </g>`);
+  });
+  return `<svg class="sf-board__overlay" viewBox="0 0 328 328" aria-hidden="true">${lines.join('')}${marks.join('')}</svg>`;
 }
 
 /**
@@ -205,7 +219,7 @@ export function routeSvg(routes) {
  * @param {{ classer: (key: string) => string, tags: Map<string, string>, view: object, routes: object[], walkingCard?: string|null, sourceHall?: string|null, hideMarkers?: boolean, dim?: boolean }} ctx
  */
 export function renderBoard(state, ctx) {
-  const full = { ...ctx, figures: figuresOnBoard(state) };
+  const full = { ...ctx, figures: figuresOnBoard(state), shownRoutes: new Set((ctx.routes || []).map((r) => r.card)) };
   return `<div class="sf-board${ctx.dim ? ' is-dimmed' : ''}"><div class="sf-board__grid">
     ${HALLS.map((h) => hallHtml(state, h, full)).join('')}
     ${ROPES.map((r) => ropeHtml(state, r, ctx.classer)).join('')}

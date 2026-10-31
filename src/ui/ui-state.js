@@ -42,6 +42,9 @@ const view = {
   floats: [],
   /** The hall hovered (for the tooltip), key or null. */
   hover: null,
+  /** Celebrity routes the player switched on or off by clicking (card ids), on top of the default:
+   *  this Hour's celebrities are shown during the Coffee Break and the Floor. */
+  routes: { on: new Set(), off: new Set() },
 };
 
 let counter = 0;
@@ -147,6 +150,7 @@ export function resetForNewGame() {
   view.busy = null;
   view.floats = [];
   view.logOpen = false;
+  view.routes = { on: new Set(), off: new Set() };
   clearFlash();
 }
 
