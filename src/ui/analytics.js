@@ -17,7 +17,7 @@
 // test suite can see them without a network call. A sink only works while an id
 // is set (the "empty id means nothing is sent" promise has no exceptions).
 //
-// THE EVENTS (web-build-notes/google-analytics-setup.md lists them for Dean; keep the two in step):
+// THE EVENTS (keep any analytics set-up notes in step with this list):
 //   game_start               player_count, human_players, bot_players, bot_levels, variants_hash, version
 //   hour_end                 hour, leader_seat_type, score_spread
 //   game_end                 player_count, human_players, winner_seat_type, winning_score, margin, duration_minutes,

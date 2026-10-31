@@ -6,7 +6,8 @@
   "description": "Browser version of the board game Superfans",
   "scripts": {
     "dev": "npx http-server -p 8080 -c-1",
-    "test": "node tests/run-all.mjs"
+    "test": "node tests/run-all.mjs",
+    "test:quick": "node tests/run-all.mjs --quick"
   },
   "devDependencies": {
     "playwright": "^1.50.0"

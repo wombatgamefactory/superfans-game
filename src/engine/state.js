@@ -6,7 +6,7 @@
 // booleans and null. Never undefined, never a function, a Date, a Map, a Set
 // or a class instance. Undo, saved games, bug reports, replay, blind copies
 // for search and the Web Worker hand-off all depend on it. The field list is
-// in web-build-notes/engine-contract.md, "State shape".
+// in createInitialState below.
 //
 // `createInitialState` builds the table as it is after setup (R5), before
 // anybody has decided anything. The public `createGame` (game.js) then runs the

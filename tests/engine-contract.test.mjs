@@ -1,5 +1,5 @@
-// engine-contract.test.mjs - the engine keeps its contract
-// (web-build-notes/engine-contract.md). Exits 1 on any failure.
+// engine-contract.test.mjs - the engine keeps its contract (state shape, decision
+// stack, events, determinism). Exits 1 on any failure.
 //
 // Checked:
 //   - purity: no DOM, console, storage, clock or Math.random in src/engine and src/bots;

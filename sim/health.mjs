@@ -24,7 +24,7 @@ export const HEALTH_TABLE = [
     id: 'winningScore',
     label: 'Winning score',
     unit: 'VP',
-    rule: { kind: 'info' }, // no design target score yet: set { kind: 'range', min, max } when Dean has one
+    rule: { kind: 'info' }, // no design target score yet: set { kind: 'range', min, max } when the designer has one
     bad: 'Inflation is usually a per-piece multiplier.',
     value: (a) => a.scores?.winning.mean ?? null,
   },

@@ -30,6 +30,10 @@ import { HEURISTIC_WEIGHTS, rolloutPolicy, scoreValidActions } from '../src/bots
 
 const SELF = fileURLToPath(import.meta.url);
 const JITTER = 0.3;
+// QUICK=1 (npm run test:quick) plays fewer games per check. Every threshold is unchanged; only the sample
+// size shrinks, so a quick pass is a smoke check and the full run (npm test) stays the gate.
+const QUICK = process.env.QUICK === '1';
+const scale = (n) => (QUICK ? Math.max(20, Math.round(n / 4)) : n);
 
 // ---------------------------------------------------------------------------
 // Worker: plays a block of games and prints one JSON line
@@ -165,7 +169,7 @@ function timing(games) {
   return d ? ms / d : 0;
 }
 
-console.log(`bots.test.mjs (${PROCS} worker processes)`);
+console.log(`bots.test.mjs (${PROCS} worker processes${QUICK ? ', QUICK: reduced game counts' : ''})`);
 
 // 1. Interface ---------------------------------------------------------------
 
@@ -178,7 +182,7 @@ await check('interface: BOT_LEVELS, isAsyncLevel, unknown level refused', () => 
 });
 
 await check('interface: every level returns a legal action, deterministically, without changing the state', () => {
-  for (const n of [2, 5]) {
+  for (const n of QUICK ? [2] : [2, 5]) {
     const s = E.createGame({ playerCount: n }, { seed: `iface-${n}` });
     const r = E.makeRng('drive');
     // play a few decisions in so that several frame kinds are met
@@ -225,7 +229,7 @@ await check('interface: getBot objects (contract section 13 shape) and the rollo
 // 2. Strength ----------------------------------------------------------------
 
 await check('strength: Medium beats Random in >= 90% of 200 two-player games', async () => {
-  const games = await runJob({ kind: 'duel', a: 'medium', b: 'random', players: 2, seed: 'mr' }, 200);
+  const games = await runJob({ kind: 'duel', a: 'medium', b: 'random', players: 2, seed: 'mr' }, scale(200));
   assertClean(games, 'medium-random');
   const p = duelSummary(games, 'medium');
   console.log(`       Medium vs Random: ${pct(p)} (sigma ${pct(sigma(p, games.length))}), ${timing(games).toFixed(1)} ms a Medium decision`);
@@ -233,7 +237,7 @@ await check('strength: Medium beats Random in >= 90% of 200 two-player games', a
 });
 
 await check('strength: Medium beats Easy in >= 65% of 200 two-player games', async () => {
-  const games = await runJob({ kind: 'duel', a: 'medium', b: 'easy', players: 2, seed: 'me' }, 200);
+  const games = await runJob({ kind: 'duel', a: 'medium', b: 'easy', players: 2, seed: 'me' }, scale(200));
   assertClean(games, 'medium-easy');
   const p = duelSummary(games, 'medium');
   console.log(`       Medium vs Easy: ${pct(p)} (sigma ${pct(sigma(p, games.length))})`);
@@ -241,7 +245,7 @@ await check('strength: Medium beats Easy in >= 65% of 200 two-player games', asy
 });
 
 await check('strength: Easy is not random (beats Random in >= 80% of 100 two-player games)', async () => {
-  const games = await runJob({ kind: 'duel', a: 'easy', b: 'random', players: 2, seed: 'er' }, 100);
+  const games = await runJob({ kind: 'duel', a: 'easy', b: 'random', players: 2, seed: 'er' }, scale(100));
   assertClean(games, 'easy-random');
   const p = duelSummary(games, 'easy');
   console.log(`       Easy vs Random: ${pct(p)} (sigma ${pct(sigma(p, games.length))}), ${timing(games).toFixed(1)} ms an Easy decision`);
@@ -251,18 +255,19 @@ await check('strength: Easy is not random (beats Random in >= 80% of 100 two-pla
 // 3. Termination -------------------------------------------------------------
 
 await check('termination: 500 mixed games at 2-5 players end with zero refusals', async () => {
-  const jobs = [2, 3, 4, 5].map((players) => runJob({ kind: 'mixed', players, seed: `mix${players}` }, 125));
+  const per = scale(125);
+  const jobs = [2, 3, 4, 5].map((players) => runJob({ kind: 'mixed', players, seed: `mix${players}` }, per));
   const games = (await Promise.all(jobs)).flat();
-  assert.equal(games.length, 500);
+  assert.equal(games.length, 4 * per);
   assertClean(games, 'mixed');
   const decisions = games.reduce((s, g) => s + g.decisions, 0) / games.length;
-  console.log(`       500 games, ${decisions.toFixed(0)} decisions a game, ${timing(games).toFixed(1)} ms a bot decision, max conversions in one window ${Math.max(...games.map((g) => g.maxConversions))}`);
+  console.log(`       ${games.length} games, ${decisions.toFixed(0)} decisions a game, ${timing(games).toFixed(1)} ms a bot decision, max conversions in one window ${Math.max(...games.map((g) => g.maxConversions))}`);
 });
 
 // 4. Seat win rates ----------------------------------------------------------
 
 await check('seat win rates: 120 all-Medium three-player games (jitter 0.3, printed)', async () => {
-  const games = await runJob({ kind: 'same', a: 'medium', players: 3, seed: 'seats' }, 120);
+  const games = await runJob({ kind: 'same', a: 'medium', players: 3, seed: 'seats' }, scale(120));
   assertClean(games, 'seats');
   const n = games.length;
   const bySeat = [0, 0, 0];

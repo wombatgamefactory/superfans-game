@@ -2,7 +2,7 @@
 # Superfans - this repo holds only the browser (JS) version.
 # Rulebook, art sources, playtesting, TTS etc. live in the parent
 # Superfans folder, outside the repo. Anything ignored here stays
-# local (and in Dropbox) but never reaches GitHub.
+# local but never reaches GitHub.
 # =============================================================
 
 # --- internal design & working documents ---

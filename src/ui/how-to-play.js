@@ -1,7 +1,7 @@
 // how-to-play.js - the plain-English rules (T17).
 //
-// Hand-written from rules-spec/superfans-rules-spec-v2.md (the rules of record
-// for the code, 31/10/2026), with every number read from the engine's
+// Hand-written from the numbered rules spec (the rules of record for the
+// code, 31/10/2026), with every number read from the engine's
 // constants so the page can never disagree with the game. Rule numbers are in
 // the comments, not on the page. Shared by the landing page ("How to play")
 // and the in-game Rules modal.

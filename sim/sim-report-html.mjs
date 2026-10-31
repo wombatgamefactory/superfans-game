@@ -7,16 +7,17 @@
 // verdicts come from sim/health.mjs: no thresholds are duplicated here.
 //
 // Output goes OUTSIDE the repo, default
-//   S:\Dropbox\dev\Cardboard\Superfans\web-build-notes\sim-reports\<name>.html
+//   <system temp dir>/superfans-sim-reports/<name>.html   (pass --out=<file.html> to choose)
 // and is never overwritten: if the file exists, -v2, -v3 ... is appended.
 // Everything is inline (SVG charts, CSS, a little vanilla JS); the page opens offline.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname, join, basename } from 'node:path';
+import { tmpdir } from 'node:os';
 import { aggregate } from './aggregate.mjs';
 
-const DEFAULT_DIR = 'S:\\Dropbox\\dev\\Cardboard\\Superfans\\web-build-notes\\sim-reports';
+const DEFAULT_DIR = join(tmpdir(), 'superfans-sim-reports');
 
 // ---- small helpers -------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 // config.js - values filled in by the designer at release.
 // An EMPTY value switches its feature off: no analytics request is made and no
-// bug-report email link is shown. Keep both empty in source until Dean supplies them.
+// bug-report email link is shown. Keep both empty in source until the release values are known.
 
 export const CONFIG = {
   /** GA4 measurement id ("G-XXXXXXXXXX"). Empty: analytics is inert. */

@@ -12,7 +12,7 @@
 //
 // Every event is plain JSON: `{ type, seq, ...fields }`, `seq` being the number
 // of the applied action it belongs to (state.seq). The fields of every type are
-// listed in web-build-notes/engine-contract.md, "Events".
+// listed with the EVENTS table below.
 //
 // SECRET EVENTS. Events of the types in SECRET_EVENT_TYPES carry a hidden card
 // id and `secret: true` with `player` = the only seat allowed to see `card`.

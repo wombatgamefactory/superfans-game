@@ -6,7 +6,7 @@
 //
 // Per game: a record (SCHEMA.md) built from engine events only, with a bookkeeping check that the
 // VP, coffee and selfies the events announced equal the engine's own totals. Per run: a JSON file
-// (default: the system temp dir, never inside Dropbox, never overwritten) and a printed report
+// (default: the system temp dir, never inside a synced folder, never overwritten) and a printed report
 // (sim-report.mjs). Exit code 1 if any game was refused, crashed, hit the decision cap or failed
 // the bookkeeping check; turn-capped games are reported as a finding but do not fail the run.
 

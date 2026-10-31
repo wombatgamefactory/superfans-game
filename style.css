@@ -4,7 +4,6 @@
    clay art. Warm carpet neutrals, cream clay panels with soft shadows,
    lanyard player badges, clay hall signs, velvet-rope queues.
 
-   Spec and rules of use: web-build-notes/ui-design-v1.md (beside the repo).
    Living reference: design/components.html and design/mockups.html.
 
    Conventions
@@ -1883,6 +1882,14 @@ button { font: inherit; color: inherit; }
 }
 .bug-fab:hover, .bug-fab:focus-visible { opacity: 1; color: var(--ink); }
 .bug-fab:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }
+/* In a game every corner holds play (Swag deck, queues), so the button shrinks to a
+   small "!" circle there and shows its label on hover or keyboard focus. The label
+   stays in the DOM (clipped, not removed) so screen readers still announce it. */
+body.sf-page--game .bug-fab:not(:hover):not(:focus-visible) { width: 34px; min-height: 34px; padding: 0; border-radius: 50%; }
+body.sf-page--game .bug-fab:not(:hover):not(:focus-visible)::before { content: '!'; font-size: 16px; line-height: 1; }
+body.sf-page--game .bug-fab:not(:hover):not(:focus-visible) span {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
 .bug-modal { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: var(--gutter, 16px); background: rgba(42, 31, 23, .55); overflow: auto; }
 .bug-card { width: min(640px, 100%); max-height: 100%; overflow: auto; display: grid; gap: var(--s3); padding: var(--s5); border-radius: var(--r-md); background: var(--paper); color: var(--ink); box-shadow: var(--clay-lift, 0 8px 24px rgba(0,0,0,.3)); }
 .bug-card h2 { margin: 0; font-size: var(--fs-xl); }

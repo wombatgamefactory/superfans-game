@@ -128,8 +128,8 @@ import {
 // `options.weights` overrides any entry for one bot (A/B tuning, archetypes
 // in the simulator). Where a value was tuned, the comment gives the duel that
 // justified it: "A/B 54%" = the changed Medium won 54% of 2-player games
-// against the baseline Medium, seats alternated, jitter 0.3 (see
-// web-build-notes/bot-notes-v1.md for the method and sigma).
+// against the baseline Medium, seats alternated, jitter 0.3 (sigma is about
+// 3.5-5 points at 100-200 games).
 
 export const HEURISTIC_WEIGHTS = Object.freeze({
   // --- coffee and selfies

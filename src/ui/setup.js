@@ -281,7 +281,7 @@ export function showSetup(root, options) {
     }).join('');
     return `<details class="sf-details sf-variants" data-variants ${detailsOpen ? 'open' : ''}>
       <summary>Game options (rule variants) <span class="sf-variants__count">${changed ? `${changed} changed` : 'standard rules'}</span></summary>
-      <p class="sf-variants__intro">The standard rules are Dean's rulings of 31/10/2026. These switches exist for testing and house rules.</p>
+      <p class="sf-variants__intro">These are the standard rules. The switches exist for testing and house rules.</p>
       <div class="sf-variants__grid">${rows}</div>
       <button type="button" class="sf-btn sf-btn--ghost" data-variants-reset ${changed ? '' : 'disabled'}>Back to the standard rules</button>
     </details>`;

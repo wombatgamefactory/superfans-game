@@ -1,7 +1,7 @@
 // index.js - the public face of the engine.
 //
 // Bots, the simulator, the UI and the tests import from THIS file only.
-// web-build-notes/engine-contract.md describes every export. Engine files
+// The exports are grouped and commented below. Engine files
 // import each other in one direction:
 //
 //   data/cards, rng, events -> rules -> variants -> board -> state -> queries

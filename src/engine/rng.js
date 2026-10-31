@@ -4,7 +4,7 @@
 // that object and advances it in place. Nothing in src/engine or src/bots may
 // use any other source of randomness (spec R23.4).
 //
-// Two streams, never mixed (web-build-notes/engine-contract.md, "RNG"):
+// Two streams, never mixed:
 //   - the GAME stream lives at `state.rng` and is the only stream the engine
 //     reads; a game is a pure function of (config, seed, action list);
 //   - each BOT gets its own stream, made by the driver with `makeRng(botSeed)`

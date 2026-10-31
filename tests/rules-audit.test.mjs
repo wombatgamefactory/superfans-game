@@ -1,7 +1,7 @@
 // rules-audit.test.mjs - T10 independent rules conformance audit (31/10/2026).
 //
-// Every check is written from rules-spec/superfans-rules-spec-v2.md (R0-R28,
-// Appendix B) and rules-spec/rulings-2026-10-31.md, NOT from the engine code.
+// Every check is written from the numbered rules spec v2 (R0-R28, Appendix B)
+// and the designer's rulings of 31/10/2026, NOT from the engine code.
 // The engine is driven only through its public API (src/engine/index.js):
 // a real game is created with a seed, then plain-JSON fields are edited to
 // build the position a rule talks about, then legal actions are applied.

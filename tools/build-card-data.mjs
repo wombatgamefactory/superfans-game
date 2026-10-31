@@ -22,8 +22,7 @@
 // Each card also carries the id of its art in assets/manifest.json, or null
 // where the manifest has none.
 //
-// When the catalogue file is missing (a clean clone outside the Dropbox
-// folder), --check reports that and exits 0: the committed cards.js stands.
+// When the catalogue file is missing (a clean clone on its own), --check reports that and exits 0: the committed cards.js stands.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

@@ -205,7 +205,7 @@ export function helpText() {
   lines.push('Flags');
   lines.push(`  --games=N            games per player count (default ${DEFAULTS.games})`);
   lines.push(`  --players=N[,N...]   2..5, or a list such as 2,3,4,5 (one run and one output file each; default ${DEFAULTS.players})`);
-  lines.push('  --bots=L[,L...]      bot level per seat: random, easy, medium (hard is async and not supported here).');
+  lines.push('  --bots=L[,L...]      bot level per seat: random, easy, medium, hard (hard is slow: about 12 samples a turn).');
   lines.push('                       One level = every seat; a list is per seat (padded with its last entry).');
   lines.push('                       Default: medium when src/bots/index.js exists, otherwise random.');
   lines.push(`  --jitter=N           per-decision random tiebreak passed to the bots (default ${DEFAULTS.jitter}; 0 = deterministic bots,`);

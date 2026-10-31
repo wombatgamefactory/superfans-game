@@ -1,4 +1,4 @@
-// rules.test.mjs - one check per rule family of the spec (superfans-rules-spec-v2.md), driven through the
+// rules.test.mjs - one check per rule family of the numbered rules spec (v2), driven through the
 // public engine API on constructed positions. Expected values are READ FROM THE CONSTANTS (R27) wherever
 // the rule is a number, never typed in. Check names carry the rule numbers they cover.
 //
