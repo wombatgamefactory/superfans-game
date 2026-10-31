@@ -11,6 +11,6 @@ export const CONFIG = {
    *  waits for the visitor to accept the Analytics category. Empty: no banner. */
   COOKIEYES_ID: 'b4b72588ac323168ef2bca929b5e5cd9',
   /** Where "Email this report" goes. Empty: the mailto link is hidden. */
-  BUG_REPORT_EMAIL: '',
+  BUG_REPORT_EMAIL: 'info@wombatgamefactory.com',
   VERSION: '0.1.0',
 };

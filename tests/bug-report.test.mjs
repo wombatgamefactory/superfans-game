@@ -15,6 +15,7 @@ import path from 'node:path';
 import { playGame } from './helpers/headless-game.mjs';
 import { startServer, launch, openPage, tempDir } from './helpers/ui-harness.mjs';
 import { hashState, cloneState, replayGame } from '../src/engine/index.js';
+import { CONFIG } from '../src/ui/config.js';
 import {
   buildReport, capValue, addToArchive, makeReportId, reportFileName, slugOf, logAction, logEvent, getLogs, resetLogs, startLogs,
   CAPS, LOG_SIZES, UNCAPPED_SECTIONS, REPORT_SCHEMA_VERSION, CATEGORIES,
@@ -141,7 +142,8 @@ try {
   await page.keyboard.press('Control+Shift+B');
   await page.waitForSelector('#bug-modal [data-bug-field="dialog"]');
   ok(true, 'Ctrl+Shift+B opens the dialog');
-  ok((await page.locator('#bug-modal [data-bug-act="mailto"]').count()) === 0, 'no email option while BUG_REPORT_EMAIL is empty');
+  const hasEmail = CONFIG.BUG_REPORT_EMAIL.trim() !== '';
+  ok((await page.locator('#bug-modal [data-bug-act="mailto"]').count()) === (hasEmail ? 1 : 0), `email option shown only when BUG_REPORT_EMAIL is set (set: ${hasEmail})`);
   await page.fill('[data-bug-field="title"]', 'Queue looks wrong');
   await page.fill('[data-bug-field="actual"]', 'It said full.');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('[data-bug-act="download"]')]);

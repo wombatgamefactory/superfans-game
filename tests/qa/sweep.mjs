@@ -28,6 +28,8 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const J = (...parts) => parts.join('');
 const MAX_BYTES = 1024 * 1024;
 export const NOREPLY = J('273657828+wombatgamefactory', '@users.noreply.github.com');
+/** The public support address the bug reporter mails to (also used by Firefly Festival). */
+export const SUPPORT = J('info', '@wombatgamefactory.com');
 
 // ---------------------------------------------------------------------------
 // Detectors
@@ -48,9 +50,9 @@ export const DETECTORS = [
   {
     rule: 'email',
     re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/,
-    note: 'an e-mail address other than the GitHub no-reply',
+    note: 'an e-mail address other than the GitHub no-reply and the public support address',
     sample: J('someone', '@', 'example.com'),
-    ignore: (m) => m === NOREPLY,
+    ignore: (m) => m === NOREPLY || m === SUPPORT,
   },
   {
     rule: 'secret',
