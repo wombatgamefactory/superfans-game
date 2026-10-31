@@ -22,6 +22,7 @@ import {
 import { art, escapeHtml, ICON, SELFIE_COLOURS, SYMBOL_WORD } from './art.js';
 import { previewAchievementVp } from './preview.js';
 import { selfiesHtml } from './panels.js';
+import { howToPlayHtml } from './how-to-play.js'; // T17
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -227,24 +228,9 @@ function settings(ctx) {
 }
 
 function rules(ctx) {
-  const K = getConstants(ctx.state);
-  return shell(
-    'Rules at a glance',
-    `<div class="sf-rules">
-      <p>Superfans is played over <b>5 Hours</b>. Each Hour has a <b>Coffee Break</b> (everyone gets coffee from that Hour's celebrity), <b>On the Floor</b> (take turns until everyone has passed) and a <b>Celebrity Walk</b> (the celebrity visits each hall on their route and scores the queue at their destination).</p>
-      <p>On your turn you may make free Selfie Exchanges, then take <b>one</b> main action:</p>
-      <ul>
-        <li><b>Move 2</b> (${K.COSTS.COST_MOVE_2} coffee): one Crew, up to 2 halls. <b>Move 1 Crew x3</b> (${K.COSTS.COST_MOVE_3_CREW}): three Crew, one hall each.</li>
-        <li><b>New N00b</b> (${K.COSTS.COST_NEW_NOOB}): a new Crew at the Entrance. <b>Upgrade</b> (${K.COSTS.COST_UPGRADE}): N00b to VIP, VIP to AAA.</li>
-        <li><b>Volunteer</b> (${K.COSTS.COST_VOLUNTEER}): an Usher on a rope, Security or a Photographer in a hall.</li>
-        <li><b>Take a Selfie</b> (${K.COSTS.COST_TAKE_SELFIE}): needs a Crew in the celebrity's hall. <b>Swag</b>: pay Selfies of the card's colour. <b>Club Power</b>: once an Hour.</li>
-        <li><b>Pass</b>: score or bin an Achievement. The first to pass gets +${K.PASS.PASS_FIRST_PASSER_COFFEE} coffee. Later pass turns earn coffee or VP up the ladder.</li>
-      </ul>
-      <p>Your place in a queue depends on badge (AAA, then VIP, then N00b), then Security, then who arrived first. Prime Position (slot 1) earns a Selfie each time the celebrity enters the hall. Free trades: 2 Selfies for ${K.EXCHANGE.EXCHANGE_E1.GAIN_COFFEE} coffee, 2 for 1 of another colour, 4 for ${K.EXCHANGE.EXCHANGE_E3.GAIN_VP} VP.</p>
-      <p>After Hour 5 your last Achievement scores triple. The highest VP wins.</p>
-    </div>`,
-    { closable: true, wide: true, id: 'rules' },
-  );
+  // T17: the full plain-English rules (how-to-play.js), numbers from this game's constants
+  const st = ctx.state;
+  return shell('How to play', howToPlayHtml({ K: getConstants(st), variants: st.variants, players: st.players.length }), { closable: true, wide: true, id: 'rules' });
 }
 
 // ---- the celebrity scoring popup -------------------------------------------------------------

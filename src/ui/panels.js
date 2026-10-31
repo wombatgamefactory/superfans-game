@@ -95,9 +95,9 @@ export function renderTopbar(ctx) {
     <div class="sf-phases">${phases}${finalPill}</div>
     <span class="sf-topbar__spacer"></span>
     <div class="sf-topbar__menu">
-      <button class="sf-btn" data-act="undo" ${undoOk ? '' : 'disabled'} title="${undoOk ? 'Undo your last action (until the turn is committed)' : 'Nothing to undo: undo works until another player acts.'}"><span aria-hidden="true">&#8630;</span> <span class="sf-btn__label">Undo</span></button>
-      <button class="sf-btn" data-act="log" title="Game log"><span aria-hidden="true">&#9776;</span> <span class="sf-btn__label">Log</span></button>
-      <button class="sf-btn" data-act="rules" title="Rules summary"><span aria-hidden="true">?</span> <span class="sf-btn__label">Rules</span></button>
+      <button class="sf-btn" data-act="undo" aria-label="Undo" ${undoOk ? '' : 'disabled'} title="${undoOk ? 'Undo your last action (until the turn is committed)' : 'Nothing to undo: undo works until another player acts.'}"><span aria-hidden="true">&#8630;</span> <span class="sf-btn__label">Undo</span></button>
+      <button class="sf-btn" data-act="log" aria-label="Game log" title="Game log"><span aria-hidden="true">&#9776;</span> <span class="sf-btn__label">Log</span></button>
+      <button class="sf-btn" data-act="rules" aria-label="How to play" title="How to play: the rules"><span aria-hidden="true">?</span> <span class="sf-btn__label">Rules</span></button>
       <button class="sf-btn sf-btn--icon" data-act="settings" title="Settings" aria-label="Settings">&#9881;</button>
     </div>`;
 }

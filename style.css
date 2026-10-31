@@ -1899,3 +1899,191 @@ button { font: inherit; color: inherit; }
 .bug-past { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--fs-sm); }
 .bug-past__id { font-family: monospace; font-weight: 700; }
 .bug-pastbox summary { cursor: pointer; font-weight: 800; font-size: var(--fs-sm); }
+
+
+/* =====================================================================
+   T17 polish: landing page, How to play, responsive layout, ambient
+   motion and accessibility. Token values change inside media queries;
+   components are only re-laid-out, never restyled from scratch.
+   ===================================================================== */
+
+/* ---- T17.1 Landing hero ---- */
+.sf-landing { padding-bottom: var(--s5); overflow-x: clip; }
+.sf-hero__frame { position: relative; width: min(1100px, 100%); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--clay-lift); }
+.sf-hero__frame .sf-hero__art { width: 100%; box-shadow: none; border-radius: 0; aspect-ratio: 1400 / 684; object-fit: cover; }
+/* crowd shimmer: a slow sheen of stage light across the hero art */
+.sf-hero__frame::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 246, 214, .28) 48%, transparent 61%);
+  transform: translateX(-100%);
+  animation: sf-shimmer 9s ease-in-out 1.5s infinite;
+}
+@keyframes sf-shimmer { 0% { transform: translateX(-100%); } 35%, 100% { transform: translateX(100%); } }
+ul.sf-statstrip { list-style: none; padding: 0; }
+/* the setup panel shows above the fold on a laptop: the hero art is capped by the window height */
+.sf-hero__frame { width: min(1100px, 100%, calc(40vh * 1400 / 684)); }
+.sf-hero > :not(.sf-motes) { position: relative; }   /* text sits above the drifting motes */
+.sf-actiongrid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+@media (min-width: 561px) and (max-width: 800px) {
+  /* T7 stacks these at 800 px; three across still reads well down to a large phone */
+  .sf-steps, .sf-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 800px) {
+  /* seat row: swatch, name and remove on one line; colours and seat type below */
+  .sf-seat [data-remove] { grid-row: 1; grid-column: 3; }
+}
+.sf-hero__sub { padding: 0 4px; }
+
+/* ---- T17.2 Setup panel ---- */
+.sf-setup__title { font-size: var(--fs-xl); }
+.sf-landing__hist { width: min(920px, calc(100% - 2 * var(--gutter))); margin: 0 auto; }
+.sf-landing__hist:empty { display: none; }
+/* colour dots carry their initial, and a taken colour is struck through (not only faded) */
+.sf-colour { display: grid; place-items: center; width: 28px; height: 28px; color: var(--pc-ink); font-size: 11px; font-weight: 900; line-height: 1; }
+.sf-colour:disabled {
+  opacity: .45;
+  background-image: linear-gradient(135deg, transparent 44%, var(--ink) 44% 56%, transparent 56%);
+}
+.sf-colour:focus-visible, .sf-seg button:focus-visible, .sf-select:focus-visible, .sf-details summary:focus-visible { outline: 3px solid var(--zone-act); outline-offset: 2px; }
+.sf-seg button { min-height: 32px; }
+.sf-seg button:hover:not(.is-selected) { color: var(--ink); }
+
+.sf-variants summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.sf-variants__count { font-size: var(--fs-xs); font-weight: 800; color: var(--ink-muted); }
+.sf-variants__intro { margin: 8px 0 var(--s3); color: var(--ink-soft); font-size: var(--fs-sm); }
+.sf-variants__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--s3); margin-bottom: var(--s3); }
+.sf-variant { display: grid; gap: 4px; align-content: start; padding: 8px 10px; border-radius: var(--r-sm); background: var(--paper); }
+.sf-variant.is-changed { box-shadow: inset 0 0 0 2px var(--zone-act); }
+.sf-variant label { font-weight: 900; font-size: var(--fs-sm); }
+.sf-variant__desc { margin: 0; font-size: var(--fs-xs); color: var(--ink-muted); font-weight: 700; }
+.sf-select {
+  width: 100%; min-height: 36px; padding: 0 8px;
+  border: 0; border-radius: var(--r-sm); background: #fff; color: var(--ink);
+  font: inherit; font-size: var(--fs-sm); font-weight: 800;
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+/* ---- T17.3 Below the fold ---- */
+.sf-action--static { cursor: default; }
+.sf-action--static:hover { transform: none; }
+.sf-about__grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.sf-about__grid p { margin: 0 0 var(--s3); font-size: var(--fs-md); color: var(--ink-soft); }
+.sf-features { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.sf-features li { padding: 10px 14px; border-radius: var(--r-md); background: var(--paper); box-shadow: var(--clay-drop); font-size: var(--fs-sm); }
+.sf-footer p { margin: 4px 0; }
+.sf-footer a { color: var(--zone-act-2); font-weight: 800; }
+.sf-footer a:focus-visible { outline: 3px solid var(--zone-act); outline-offset: 2px; border-radius: 4px; }
+
+/* ---- T17.4 How to play (landing view and in-game Rules modal) ---- */
+.sf-htp-view { z-index: 70; }
+.sf-htp-view .sf-modal, .sf-scrim[data-modal="rules"] .sf-modal { width: min(820px, 100%); }
+.sf-modal__title:focus { outline: none; }
+.sf-htp { display: grid; gap: var(--s4); font-size: var(--fs-sm); }
+.sf-htp h3 { font-size: var(--fs-lg); margin: 0 0 6px; color: var(--zone-act-2); }
+.sf-htp p { margin: 0 0 8px; }
+.sf-htp ul, .sf-htp ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.sf-htp section { scroll-margin-top: 12px; }
+.sf-htp__toc { display: flex; flex-wrap: wrap; gap: 6px; }
+.sf-htp__toc a { padding: 3px 10px; border-radius: var(--r-pill); background: var(--paper-3); color: var(--ink); font-weight: 800; font-size: var(--fs-xs); text-decoration: none; }
+.sf-htp__toc a:hover, .sf-htp__toc a:focus-visible { background: var(--zone-act); color: #fff; }
+.sf-htp__table { border-collapse: collapse; margin: 4px 0 8px; font-weight: 800; }
+.sf-htp__table th, .sf-htp__table td { padding: 4px 12px; border: 2px solid var(--line); text-align: center; }
+.sf-htp__table th[scope="row"] { text-align: left; background: var(--paper-2); }
+.sf-htp__table .is-now { background: var(--hi-soft); }
+.sf-htp__fine { font-size: var(--fs-xs); color: var(--ink-muted); font-weight: 700; }
+ul.sf-htp__acts { list-style: none; padding: 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 8px; }
+.sf-htp__act { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 10px; border-radius: var(--r-sm); background: var(--paper-2); }
+.sf-htp__acticon img { width: 36px; height: 36px; object-fit: contain; }
+.sf-htp__cost { display: inline-block; padding: 0 8px; border-radius: var(--r-pill); background: var(--crema); color: var(--coffee); font-size: var(--fs-xs); font-weight: 900; }
+
+/* ---- T17.5 Ambient motion: idle lanyards sway on their straps ---- */
+@keyframes sf-sway { 0%, 100% { transform: rotate(-0.6deg); } 50% { transform: rotate(0.6deg); } }
+.sf-players .sf-lanyard:not(.is-active) .sf-lanyard__badge { transform-origin: 50% -20px; animation: sf-sway 7s ease-in-out infinite; }
+.sf-players .sf-lanyard:nth-child(2n):not(.is-active) .sf-lanyard__badge { animation-delay: -2.5s; animation-duration: 8s; }
+.sf-players .sf-lanyard:nth-child(3n):not(.is-active) .sf-lanyard__badge { animation-delay: -4s; }
+
+/* ---- T17.6 Accessibility: visible focus on every control ---- */
+.sf-btn:focus-visible, .sf-action:focus-visible, [data-target]:focus-visible { outline: 3px solid var(--zone-act); outline-offset: 2px; }
+.sf-handover .sf-btn:focus-visible { outline-color: #fff; }
+
+/* ---- T17.6b End screen: the grid track never grows wider than the window ---- */
+.sf-end { grid-template-columns: minmax(0, 1fr); }
+.sf-end > * { min-width: 0; }
+.sf-tabpanel { grid-template-columns: minmax(0, 1fr); }
+.sf-tabpanel > * { min-width: 0; }   /* the wide scores table scrolls inside its own box */
+.sf-stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.sf-endpage { overflow-x: clip; }
+.sf-endpage > .sf-confetti { overflow: hidden; }
+@media (max-width: 700px) {
+  .sf-end__hero { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+  .sf-end__title { font-size: clamp(30px, 9vw, 44px); }
+  .sf-podium { flex-wrap: wrap; justify-content: center; }
+  .sf-podium__step { width: 96px; }
+}
+
+/* ---- T17.7 Tablet portrait and phone: one column, the page scrolls ----
+   At 900 px and below the side panel cannot sit beside a useful board, so
+   the phone layout of T7 section 4.3 starts here. */
+@media (max-width: 900px) {
+  :root { --board-size: min(calc(100vw - 2 * var(--gutter)), 760px); --players-h: auto; }
+  body.sf-page--game { height: auto; overflow: auto; }
+  .sf-game {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+    grid-template-areas: "top" "players" "board" "side";
+  }
+  .sf-game > .sf-stage { justify-self: center; }
+  .sf-game { overflow-x: clip; }   /* walk chips and flashes at the board edge never widen the page */
+  .sf-side { overflow: visible; }
+  .sf-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .sf-topbar { flex-wrap: wrap; row-gap: 6px; padding: 6px var(--s2); min-height: var(--topbar-h); }
+  .sf-topbar__spacer { display: none; }
+  .sf-topbar__menu { margin-left: auto; }
+}
+@media (max-width: 700px) {
+  .sf-topbar { gap: 6px; justify-content: space-between; }
+  .sf-topbar__logo { height: 34px; }
+  .sf-hour-marker { width: 42px; height: 42px; }
+  .sf-hour-marker span { font-size: 18px; }
+  .sf-hours { order: 5; width: 100%; justify-content: center; gap: 4px; }
+  .sf-hour { height: 30px; padding: 0 6px 0 4px; }
+  .sf-hour__face { width: 20px; height: 20px; }
+  .sf-phases { order: 6; }
+  .sf-topbar__menu { gap: 4px; }
+  .sf-topbar__menu .sf-btn { min-width: 40px; padding: 0 10px; }
+  .sf-players { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .sf-players .sf-lanyard__avatar { display: none; }
+  .sf-players .sf-lanyard__head { grid-template-columns: minmax(0, 1fr) auto; }
+  /* leave room at the foot of every page for the "Report a problem" button */
+  body { padding-bottom: 52px; }
+  .sf-hero { padding-top: var(--s3); }
+  .sf-hero__sub { font-size: var(--fs-md); }
+  .sf-statstrip__item { padding: 6px 12px 6px 6px; }
+  .sf-setup { padding: var(--s4) var(--s3); }
+  .sf-seat { gap: 8px; padding: 8px; }
+  .sf-seat .sf-seg { justify-self: stretch; display: flex; }
+  .sf-seat .sf-seg button { flex: 1; padding: 6px 4px; }
+  .sf-setup__foot .sf-btn--go { margin-left: 0; width: 100%; }
+  .sf-about__grid { grid-template-columns: 1fr; }
+  .sf-section__title { font-size: var(--fs-xl); }
+  .sf-modal { padding: var(--s4) var(--s3); }
+  .sf-scrim { padding: 8px; }
+}
+
+@media (max-width: 700px) {
+  .sf-hour-marker { display: none; }   /* the current Hour plate is purple; the marker repeats it */
+  .sf-hours { order: 5; width: auto; flex: 1 1 auto; justify-content: flex-start; flex-wrap: wrap; }
+  .sf-phases { order: 6; }
+  .sf-market { flex-wrap: wrap; gap: 6px; }
+}
+@media (max-width: 480px) {
+  :root { --card-sm: 48px; }
+  .sf-hour .sf-hour__face { display: none; }
+  .sf-hour { padding: 0 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-hero__frame::after { display: none; }
+  .sf-players .sf-lanyard__badge { animation: none !important; transform: none !important; }
+}

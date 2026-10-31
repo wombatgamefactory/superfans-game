@@ -549,7 +549,7 @@ function toSetup() {
   app.root.dataset.screen = 'setup';
   app.regions = {};
   document.body.classList.remove('sf-page--game');
-  showSetup(app.root, { seats: app.lastSetup ? app.lastSetup.seats : defaultSeats(), levels: botLevels(), onStart: startGame });
+  showSetup(app.root, { seats: app.lastSetup ? app.lastSetup.seats : undefined, variants: app.lastSetup ? app.lastSetup.variants : undefined, levels: botLevels(), onStart: startGame }); // T17: keep the variants; no seats -> remembered setup
 }
 
 // ---- clicks -----------------------------------------------------------------------------------------------------------------
