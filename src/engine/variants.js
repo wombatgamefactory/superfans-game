@@ -148,15 +148,11 @@ export const VARIANTS = [
 ];
 
 /**
- * Legal values whose rules are not written yet (task T9 writes them).
- * createGame throws on any of these. T9 empties this table.
+ * Legal values whose rules are not written yet. Empty since task T9: every value
+ * of every variant is implemented (createGame no longer refuses any). The table
+ * stays so the UI and tests can still ask `isVariantValueImplemented`.
  */
-export const UNIMPLEMENTED_VARIANT_VALUES = Object.freeze({
-  fivePlayerOpening: ['fallback'], // needs the opening-placement decision (contract "placeOpeningCrew")
-  achiever: ['draw-two-keep-one'], // needs Swag (buySwag) first
-  clubHandLimits: ['on'], // needs the discard-to-limit decision
-  militiaRoll: ['fixed'], // needs Club powers first
-});
+export const UNIMPLEMENTED_VARIANT_VALUES = Object.freeze({});
 
 const BY_NAME = new Map(VARIANTS.map((v) => [v.name, v]));
 

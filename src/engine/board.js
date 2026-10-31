@@ -1,4 +1,4 @@
-// board.js - the fixed geometry of the board (spec R3): halls, adjacency,
+// board.js - the fixed geometry of the board (spec R3; R1.6: a hall is one of the nine spaces of the 3 x 3 grid): halls, adjacency,
 // ropes, volunteer spaces, lines, plus the fixed vocabularies (colours,
 // badges). Nothing here depends on a game state.
 //
@@ -83,15 +83,18 @@ export const ROPES = deepFreeze(
 
 export const ROPE_IDS = Object.freeze(ROPES.map((r) => r.id));
 
-const ROPE_BY_PAIR = new Map();
+// hall -> hall -> rope id (nested plain objects: this is on the path of every move computation)
+const ROPE_BY_PAIR = {};
+for (const h of HALLS) ROPE_BY_PAIR[h.id] = {};
 for (const r of ROPES) {
-  ROPE_BY_PAIR.set(`${r.halls[0]}|${r.halls[1]}`, r.id);
-  ROPE_BY_PAIR.set(`${r.halls[1]}|${r.halls[0]}`, r.id);
+  ROPE_BY_PAIR[r.halls[0]][r.halls[1]] = r.id;
+  ROPE_BY_PAIR[r.halls[1]][r.halls[0]] = r.id;
 }
 
 /** The rope between two adjacent halls, or null when they are not adjacent. */
 export function ropeBetween(a, b) {
-  return ROPE_BY_PAIR.get(`${a}|${b}`) ?? null;
+  const row = ROPE_BY_PAIR[a];
+  return row === undefined ? null : row[b] ?? null;
 }
 
 /** R3.3 - adjacent halls (orthogonal), in the spec's grid order. */
@@ -108,7 +111,7 @@ export const ADJACENT = deepFreeze(
 
 /** Whether two halls share a side (R1.16). */
 export function areAdjacent(a, b) {
-  return ROPE_BY_PAIR.has(`${a}|${b}`);
+  return ropeBetween(a, b) !== null;
 }
 
 /** Ropes touching a hall (R3.4.1). */

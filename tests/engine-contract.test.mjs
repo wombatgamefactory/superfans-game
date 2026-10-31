@@ -24,6 +24,7 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const E = await import(pathToFileURL(join(root, 'src/engine/index.js')).href);
 const { randomBot } = await import(pathToFileURL(join(root, 'src/bots/randomBot.js')).href);
+const F = await import('./helpers/fixtures.mjs');
 
 let failures = 0;
 let passes = 0;
@@ -201,7 +202,8 @@ check('variants: the 12 of R26.1 in order with their defaults', () => {
   }
 });
 
-check('variants: unknown names and values are rejected; unimplemented values make createGame throw', () => {
+check('variants: unknown names and values are rejected; every value of every variant is implemented (T9)', () => {
+  assert.deepEqual(E.UNIMPLEMENTED_VARIANT_VALUES, {}, 'T9 implemented every variant value');
   assert.throws(() => E.resolveVariants({ queueSize: 'rulebook' }), /Unknown variant "queueSize"/);
   assert.throws(() => E.resolveVariants({ queueCapacity: 'big' }), /Illegal value "big" for variant "queueCapacity"/);
   assert.throws(() => E.resolveVariants({ clubs: true }), /Illegal value true/);
@@ -519,7 +521,7 @@ check('blindCopy: own hand kept, hidden cards re-drawn from the unseen pool, pub
 // Block reasons and descriptions
 // ---------------------------------------------------------------------------------------------
 
-check('block reasons: numbers, rule order, timing last, unimplemented families refused', () => {
+check('block reasons: numbers, rule order, timing last', () => {
   const s = E.createGame({ playerCount: 2, variants: { clubs: 'off', firstPlayer: 'seat-0' } }, { seed: 'reasons' });
   const me = s.toAct;
   const other = 1 - me;
@@ -532,8 +534,8 @@ check('block reasons: numbers, rule order, timing last, unimplemented families r
   assert.match(E.getBlockReason(s, { type: 'move2', crew: E.crewOnBoard(s, other)[0].id, to: 'main-hall' }), /you may only move your own/);
   assert.match(E.getBlockReason(s, { type: 'move2', crew: myCrew.id, to: 'entrance' }), /already in Entrance/);
   assert.match(E.getBlockReason(s, { type: 'takeSelfie', celebrity: 'character_tng_02' }), /not on the board|no Crew/);
-  assert.match(E.getBlockReason(s, { type: 'upgrade', crew: myCrew.id }), /not in this build yet/);
-  assert.match(E.getBlockReason(s, { type: 'buySwag', card: s.swag.market[0] }), /not in this build yet/);
+  assert.equal(E.getBlockReason(s, { type: 'upgrade', crew: myCrew.id }), null, 'Upgrade is a real action now (R12)');
+  assert.match(E.getBlockReason(s, { type: 'buySwag', card: 'swag_green_01' }), /not in the Swag market|costs 1 green Selfie/);
   assert.match(E.getBlockReason(s, { type: 'nonsense' }), /not an action/);
   assert.match(E.getBlockReason(s, { type: 'move2', crew: myCrew.id }), /needs `to`/);
   assert.match(E.getBlockReason(s, { type: 'pass', player: other }), /It is .*'s decision/);
@@ -553,7 +555,7 @@ check('block reasons: numbers, rule order, timing last, unimplemented families r
   const text = E.serialiseState(poor);
   assert.throws(() => E.applyAction(poor, { type: 'move2', crew: myCrew.id, to: 'main-hall' }), (err) => err.code === 'ILLEGAL_ACTION' && /costs 1 coffee/.test(err.reason));
   assert.equal(E.serialiseState(poor), text);
-  // unimplemented families are never offered
+  // every family is implemented (T9)
   for (const a of E.getValidActions(s)) assert.ok(E.ACTIONS[a.type].implemented);
 });
 
@@ -590,10 +592,8 @@ check('action families: every R8.3 main action and every follow-up family is in 
   }
   for (const kind of Object.keys(E.FRAME_ACCEPTS)) assert.ok(E.FRAMES[kind], `frame ${kind} has a definition`);
   const implemented = Object.keys(fam).filter((t) => fam[t].implemented).sort();
-  assert.deepEqual(implemented, [
-    'discardAchievement', 'endConversions', 'exchange', 'move2', 'move3', 'moveStep', 'newNoob', 'pass', 'passReward',
-    'rareFinds', 'scoreAchievement', 'stopMoving', 'strikeAPose', 'takeSelfie',
-  ]);
+  assert.equal(implemented.length, 34, 'all 34 action types are implemented');
+  assert.deepEqual(implemented, Object.keys(fam).sort());
 });
 
 check('achievements: every card has a count spec the evaluator knows; nothing claimable is invented', () => {
@@ -636,6 +636,81 @@ check('achievements: every card has a count spec the evaluator knows; nothing cl
   assert.equal(E.countAchievement(s, 0, 'scoring_39').count, 4, 'Caffinated 12/3');
   assert.equal(E.countAchievement(s, 0, 'scoring_12').count, 2, 'Cult Classic');
   assert.equal(E.achievementValue(s, 0, 'scoring_11', 3), 18);
+});
+
+// ---------------------------------------------------------------------------------------------
+// T9 additions
+// ---------------------------------------------------------------------------------------------
+
+const ALL_NON_DEFAULT = {
+  queueCapacity: 'rulebook',
+  celebrityColours: 'fixed-slots',
+  coffeeCap: 'coffee-break-only',
+  fivePlayerOpening: 'fallback',
+  usherInHall: 'neither',
+  homeBase: 'as-printed',
+  achiever: 'draw-two-keep-one',
+  clubHandLimits: 'on',
+  finalBoard: 'figures-removed',
+  militiaRoll: 'fixed',
+};
+
+check('T9: every non-default variant value at once - full checks every step (round trip, hash, offered = legal), zero refusals, VP bookkeeping', () => {
+  const known = new Set(Object.values(E.EVENTS));
+  for (let g = 0; g < 16; g++) {
+    const n = 2 + (g % 4);
+    const r = playRandom({ playerCount: n, variants: ALL_NON_DEFAULT }, `allvar-${g}`, `allvar-bot-${g}`, { fullCheck: g < 8, collect: true });
+    assert.equal(r.refusals, 0);
+    const total = new Array(n).fill(0);
+    for (const e of r.events) {
+      assert.ok(known.has(e.type), `unknown event ${e.type}`);
+      if (e.type === E.EVENTS.VP) total[e.player] += e.amount;
+    }
+    const sc = E.scoreGame(r.state);
+    for (let seat = 0; seat < n; seat++) assert.equal(total[seat], sc.players[seat].vp, `game ${g} seat ${seat} VP events = score`);
+    // a game is a pure function of (config, seed, chosen actions): replay rebuilds the same final state
+    if (g < 6) {
+      const again = E.replayGame(E.getGameConfig(r.state), r.chosen);
+      assert.equal(E.hashState(again), E.hashState(r.state), `game ${g} replays byte for byte`);
+    }
+  }
+});
+
+check('T9: blindCopy re-deals the pair a seat drew with Achiever (draw-two-keep-one) and Longbox memory for other seats; keeps its own', () => {
+  const s = F.game(2, { variants: { achiever: 'draw-two-keep-one' } });
+  F.buy(s, 'swag_orange_07');
+  const frame = E.topFrame(s);
+  assert.equal(frame.kind, 'achieverKeep');
+  const own = E.blindCopy(s, 0, E.makeRng('own'));
+  assert.deepEqual(E.topFrame(own).cards, frame.cards, 'the drawer sees their own pair');
+  let changed = 0;
+  for (let i = 0; i < 20; i++) {
+    const other = E.blindCopy(s, 1, E.makeRng(`other-${i}`));
+    const pool = (st) => [...st.achievements.deck, ...st.players.flatMap((p) => p.hand), ...st.achievements.discard.map((d) => d.card), ...E.topFrame(st).cards].sort();
+    assert.deepEqual(pool(other), pool(s), 'no card is lost or invented');
+    assert.deepEqual(other.players[1].hand, s.players[1].hand, 'the viewer keeps their own hand');
+    if (E.topFrame(other).cards.join() !== frame.cards.join()) changed++;
+  }
+  assert.ok(changed > 0, 'another seat cannot see the pair');
+  // Longbox Legion remembers the last discard
+  const t = F.game(2, { clubs: ['club_05', 'club_08'] });
+  F.give(t, 0, { coffee: 12 });
+  F.act(t, { type: 'clubPower', option: 'use' });
+  F.act(t, E.getValidActions(t)[0]);
+  const memo = E.topFrame(t).data.last;
+  assert.ok(memo !== '');
+  assert.equal(E.topFrame(E.blindCopy(t, 0, E.makeRng('a'))).data.last, memo);
+  assert.equal(E.topFrame(E.blindCopy(t, 1, E.makeRng('b'))).data.last, '');
+});
+
+check('T9: the effect frame is plain JSON with the documented fields; every effect step action has a describeAction label and an actionKey', () => {
+  const s = F.game(3);
+  F.buy(s, 'swag_green_09');
+  const f = E.topFrame(s);
+  assert.deepEqual(Object.keys(f).sort(), ['data', 'kind', 'player', 'source', 'step']);
+  assert.deepEqual(f.source, { kind: 'swag', card: 'swag_green_09' });
+  assertPlainJson(s);
+
 });
 
 if (failures > 0) {

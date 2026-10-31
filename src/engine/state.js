@@ -155,6 +155,9 @@ function normalisePlayers(config, K) {
   }));
 }
 
+// R2.3: the After Party cards and the workbook-only components (Gifts, Trophies, Clock tokens) are cut; nothing here stores them.
+// R23.1: everything is public (board, queues, Volunteers, coffee, selfies, VP, supply, Club, pass state, the schedule with its
+// colours R4.3.3, the market, deck sizes, scored Achievements) except R23.2's hidden cards.
 function newPlayer(seat, entry, K) {
   const vpBySource = {};
   for (const s of VP_SOURCES) vpBySource[s] = 0;
@@ -174,6 +177,7 @@ function newPlayer(seat, entry, K) {
     clubUsedThisHour: false, // R17.5, R6.4
     hand: [], // R19.1: Achievement card ids, SECRET (R23.2)
     handSize: K.LIMITS.ACHIEVEMENT_HAND_SIZE, // R19.1 (+1 per Achiever under `hand-size`)
+    achieversUsed: 0, // R16.8 swag_orange_07 Achiever cards used: each lets the hand hold one more than handSize says under `draw-two-keep-one`
     passSlot: 0, // R18: 0 = not passed this Hour, else slot 1..4
     mainActionsThisHour: 0, // R8.9 (Pass excluded)
   };
@@ -246,6 +250,7 @@ export function createInitialState(config, options = {}) {
     turn: { number: 0, player: null, kind: null },
     stack: [],
     toAct: null,
+    openingQueue: [], // R5.9.1 fallback: seats that still place an opening Crew by hand (empty under `overfill`)
     players: [],
     crew: [],
     volunteers: {},
@@ -298,7 +303,8 @@ export function createInitialState(config, options = {}) {
   }
   const bySlot = { 1: drawn.A[0], 2: drawn.A[1], 3: drawn.B[0], 4: drawn.B[1], '5a': drawn.C[0], '5b': drawn.C[1] };
 
-  // R4.3.1 - colour letters X, Y, Z dealt green / red / orange.
+  // R5.5, R4.3.1 - colour letters X, Y, Z dealt green / red / orange. R4.3.5: because Hour 4, 5a and 5b reuse X, Y, Z,
+  // each colour appears exactly twice across the six slots whatever the deal. R4.3.3: all six colours are public from the start.
   let letters;
   if (variants.celebrityColours === 'random-slots') {
     const deal = shuffle(rColours, COLOURS.slice());
@@ -335,17 +341,29 @@ export function createInitialState(config, options = {}) {
   const first = variants.firstPlayer === 'seat-0' ? 0 : rngInt(rFirst, n);
   state.startPlayer = first;
   state.firstPlayer = first;
+  const entranceCapacity = K.CAPACITY.QUEUE_CAPACITY[variants.queueCapacity][n];
+  let inEntrance = 0;
   for (const seat of openingOrder(first, n)) {
     for (let k = 0; k < K.START.OPENING_CREW_PER_PLAYER; k++) {
+      if (variants.fivePlayerOpening === 'fallback' && inEntrance >= entranceCapacity) {
+        // R5.9.1 `fallback`: the Entrance is full, so this Crew is placed by its owner as a New N00b would be (R11.2).
+        state.openingQueue.push(seat);
+        continue;
+      }
       // R5.9.1 `overfill`: every opening Crew goes into the Entrance, even over capacity.
       const crew = state.crew.find((c) => c.owner === seat && c.hall === null);
       crew.hall = ENTRANCE;
       crew.stamp = state.nextStamp++;
+      inEntrance++;
     }
   }
 
-  state.phase = 'coffeeBreak';
-  state.step = 'start';
+  state.phase = 'setup';
+  state.step = 'opening';
+  if (state.openingQueue.length === 0) {
+    state.phase = 'coffeeBreak';
+    state.step = 'start';
+  }
   return state;
 }
 
@@ -494,6 +512,7 @@ export function deserialiseState(text) {
  * know is re-drawn at random from the cards it has not seen, and the game RNG
  * is replaced. What `seat` knows stays exactly as it is.
  *
+ * R23.3: a bot decides using only what a player in its seat could see; the hotseat UI hides the hand the same way.
  * A bot that looks ahead (the Hard search bot) MUST search on blind copies,
  * never on the real state.
  *
@@ -507,6 +526,9 @@ export function blindCopy(state, seat, rng) {
   const pool = ach.deck.slice();
   for (const p of copy.players) if (p.seat !== seat) pool.push(...p.hand);
   for (const d of ach.discard) if (!d.scored && d.owner !== seat) pool.push(d.card);
+  // An Achiever choice waiting for another seat (draw-two-keep-one) holds that seat's two drawn cards.
+  const aside = copy.stack.filter((f) => f.kind === 'achieverKeep' && f.player !== seat);
+  for (const f of aside) pool.push(...f.cards);
   shuffle(rng, pool);
   for (const p of copy.players) {
     if (p.seat === seat) continue;
@@ -515,6 +537,9 @@ export function blindCopy(state, seat, rng) {
   for (const d of ach.discard) {
     if (!d.scored && d.owner !== seat) d.card = pool.pop();
   }
+  for (const f of aside) f.cards = f.cards.map(() => pool.pop());
+  // Longbox Legion remembers the last card its owner discarded (to keep the discards in one order): another seat must not see it.
+  for (const f of copy.stack) if (f.kind === 'effect' && f.player !== seat && f.data && typeof f.data.last === 'string') f.data.last = '';
   ach.deck = pool;
   shuffle(rng, copy.swag.deck);
   copy.rng = forkRng(rng);

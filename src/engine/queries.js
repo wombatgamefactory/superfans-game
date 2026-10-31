@@ -28,19 +28,19 @@ const ACH = new Map(ACHIEVEMENT_CARDS.map((c) => [c.id, c]));
 const SWAGD = new Map(SWAG_CARDS.map((c) => [c.id, c]));
 const CLUB = new Map(CLUB_CARDS.map((c) => [c.id, c]));
 
-/** The printed data of a celebrity card, or null. */
+/** R4.1 - the printed data of a celebrity card (rank, coffee value, route start to destination, scoring method), or null. */
 export function celebrityCard(id) {
   return CELEB.get(id) ?? null;
 }
-/** The printed data of an Achievement card, or null. */
+/** R1.12 - the printed data of an Achievement card, or null. */
 export function achievementCard(id) {
   return ACH.get(id) ?? null;
 }
-/** The printed data of a Swag card, or null. */
+/** R1.13 - the printed data of a Swag card, or null. */
 export function swagCard(id) {
   return SWAGD.get(id) ?? null;
 }
-/** The printed data of a Club card, or null. */
+/** R1.14 - the printed data of a Club card, or null. */
 export function clubCard(id) {
   return CLUB.get(id) ?? null;
 }
@@ -131,8 +131,49 @@ export function crewById(state, id) {
   return c && c.id === id ? c : null;
 }
 
+// ---------------------------------------------------------------------------
+// Per-call memo. getValidActions opens it for the length of ONE call, during
+// which the state is not changed, so hall counts and best paths can be
+// computed once instead of once per candidate action (movePaths dominated the
+// time per decision). It is closed in a `finally`; outside a call nothing is
+// cached, so a state mutated by hand or by a mutator is never read stale.
+// ---------------------------------------------------------------------------
+
+let memo = null;
+
+/** hall code id -> grid id, for the R10.5 tie-break. */
+const GRID_OF = Object.fromEntries(HALL_IDS.map((h) => [h, hallById(h).grid]));
+
+/** Opens the memo for one read-only pass over `state`. Returns true if this call opened it (the caller then closes it). */
+export function openQueryMemo(state) {
+  if (memo !== null) return false;
+  memo = { state, counts: null, paths: new Map() };
+  return true;
+}
+
+/** Closes the memo opened by openQueryMemo. */
+export function closeQueryMemo() {
+  memo = null;
+}
+
+function memoFor(state) {
+  return memo !== null && memo.state === state ? memo : null;
+}
+
+/** Number of Crew in each hall (by hall id), computed once per memo. */
+function hallCounts(state) {
+  const m = memoFor(state);
+  if (m !== null && m.counts !== null) return m.counts;
+  const counts = {};
+  for (const h of HALL_IDS) counts[h] = 0;
+  for (const c of state.crew) if (c.hall !== null) counts[c.hall] += 1;
+  if (m !== null) m.counts = counts;
+  return counts;
+}
+
 /** Number of Crew in a hall. */
 export function hallCount(state, hall) {
+  if (memoFor(state) !== null) return hallCounts(state)[hall] ?? 0;
   let n = 0;
   for (const c of state.crew) if (c.hall === hall) n++;
   return n;
@@ -148,22 +189,22 @@ export function hasRoom(state, hall) {
   return !isFull(state, hall);
 }
 
-/** The seat whose Volunteer is on a space, or null. */
+/** The seat whose Volunteer is on a space, or null. R13.3: a Volunteer works only for the player who placed it. */
 export function volunteerOwner(state, space) {
   return state.volunteers[space];
 }
 
-/** R9.3 - the seat with the Security volunteer in a hall, or null. */
+/** R9.3, R13.5 - the seat with the Security volunteer in a hall, or null. Security never lets a Crew overtake a higher badge (it is key 2 of R9.1). */
 export function securityOwner(state, hall) {
   return state.volunteers[securitySpace(hall)];
 }
 
-/** The seat with the Photographer in a hall, or null. */
+/** R13.6 - the seat with the Photographer in a hall, or null (R20.3.2: it needs no Crew there). */
 export function photographerOwner(state, hall) {
   return state.volunteers[photographerSpace(hall)];
 }
 
-/** The seat with the Usher on a rope, or null. */
+/** R13.4, R10.4 - the seat with the Usher on a rope, or null. */
 export function usherOwner(state, rope) {
   return state.volunteers[rope];
 }
@@ -172,6 +213,7 @@ export function usherOwner(state, rope) {
  * R9.1 - the Crew in a hall in queue order (position 1 first): badge (AAA,
  * VIP, N00b), then the Security owner's Crew first within a badge, then the
  * earlier arrival stamp. Returns the Crew records (not copies).
+ * R9.4: a queue is never stored, so it is recomputed after every change to its hall by construction.
  */
 export function queue(state, hall) {
   const sec = securityOwner(state, hall);
@@ -245,11 +287,20 @@ export function newNoobHalls(state) {
  * @returns {Object<string, { path: string[], ushers: number }>} destination -> best path (path includes the start)
  */
 export function movePaths(state, crew, maxSteps, bonusSeat) {
+  const m = memoFor(state);
+  let memoKey = null;
+  if (m !== null) {
+    memoKey = `${crew.id}|${crew.hall}|${maxSteps}|${bonusSeat}`;
+    const hit = m.paths.get(memoKey);
+    if (hit !== undefined) return hit;
+  }
   const best = {};
   const start = crew.hall;
   const room = {};
-  for (const h of HALL_IDS) room[h] = hasRoom(state, h);
-  const gridKey = (path) => path.map((h) => hallById(h).grid).join(',');
+  const cap = capacity(state);
+  const counts = hallCounts(state);
+  for (const h of HALL_IDS) room[h] = counts[h] < cap;
+  const gridKey = (path) => path.map((h) => GRID_OF[h]).join(',');
   const visit = (path, ushers) => {
     const here = path[path.length - 1];
     if (path.length > 1) {
@@ -269,6 +320,7 @@ export function movePaths(state, crew, maxSteps, bonusSeat) {
     }
   };
   visit([start], 0);
+  if (m !== null) m.paths.set(memoKey, best);
   return best;
 }
 
@@ -329,6 +381,11 @@ export function volunteersOf(state, seat, role = null) {
 
 /** Empty volunteer spaces (optionally of one role). */
 export function emptySpaces(state, role = null) {
+  const m = memoFor(state);
+  if (m !== null && role === null) {
+    if (m.empty === undefined) m.empty = VOLUNTEER_SPACES.filter((s) => state.volunteers[s.id] === null);
+    return m.empty;
+  }
   return VOLUNTEER_SPACES.filter((s) => state.volunteers[s.id] === null && (role === null || s.role === role));
 }
 

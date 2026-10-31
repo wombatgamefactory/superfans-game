@@ -19,9 +19,8 @@
 
 import { getConstants, topFrame, pushFrame, popFrame } from './state.js';
 import { openEventSink, closeEventSink, setEventSeq, eventsOn, emit, EVENTS } from './events.js';
-import { ropeBetween, COLOURS } from './board.js';
+import { COLOURS } from './board.js';
 import {
-  coffeeRoom,
   crewById,
   crewInSupply,
   movePaths,
@@ -33,121 +32,37 @@ import {
   seatsFrom,
   nextSeat,
   allPassed,
-  usherOwner,
   primeOwner,
   photographerOwner,
   celebrityCard,
+  selfieTotal,
+  swagCard,
 } from './queries.js';
 import { ACTIONS, FRAMES, getBlockReason, describeAction, windowOf } from './legality.js';
 import { addVp, scoreAchievement, scoreDestination, applyFinalScoring, scoreGame } from './scoring.js';
-import { shuffle } from './rng.js';
+import {
+  spendCoffee,
+  gainCoffee,
+  gainSelfies,
+  spendSelfies,
+  oneSelfie,
+  placeCrew,
+  moveCrewAlong,
+  drawAchievement,
+  upgradeCrew,
+  placeVolunteer,
+  refillSwagMarket,
+} from './primitives.js';
+import { startEffect, applyEffectStep, clubCost } from './cardeffects.js';
+
+// The primitives live in primitives.js; they are re-exported here for callers that always imported them from actions.js.
+export { spendCoffee, gainCoffee, gainSelfies, spendSelfies, placeCrew, moveCrewAlong, drawAchievement };
 
 /** Safety limits of the engine itself. Not rules of the game. */
 export const ENGINE_LIMITS = Object.freeze({
   /** Most automatic steps `advance` may take after one action before it reports an engine bug. */
   maxAutoSteps: 100000,
 });
-
-// ---------------------------------------------------------------------------
-// Gaining and paying. Every change to coffee, selfies and Crew goes through here.
-// ---------------------------------------------------------------------------
-
-/** R8.5 - pays coffee. The caller has checked it can be paid. */
-export function spendCoffee(state, seat, amount, cause) {
-  if (amount <= 0) return;
-  state.players[seat].coffee -= amount;
-  emit({ type: EVENTS.COFFEE_SPEND, player: seat, amount, cause });
-}
-
-/**
- * R7.3 - gains coffee up to the cap. Emits even when nothing could be kept, so
- * the stats see the waste (`lost`). Returns the amount kept.
- */
-export function gainCoffee(state, seat, amount, cause, { coffeeBreak = false, detail = null } = {}) {
-  const room = coffeeRoom(state, seat, coffeeBreak);
-  const kept = Math.min(Math.max(amount, 0), room);
-  state.players[seat].coffee += kept;
-  emit({ type: EVENTS.COFFEE_GAIN, player: seat, amount: kept, lost: Math.max(amount, 0) - kept, cause, detail });
-  return kept;
-}
-
-/** Gains selfies `{ green, red, orange }`. */
-export function gainSelfies(state, seat, gain, cause, detail = null) {
-  const s = state.players[seat].selfies;
-  for (const c of COLOURS) s[c] += gain[c];
-  emit({ type: EVENTS.SELFIE_GAIN, player: seat, gain: { ...gain }, cause, detail });
-}
-
-/** Pays selfies `{ green, red, orange }`. The caller has checked they are held. */
-export function spendSelfies(state, seat, pay, cause) {
-  const s = state.players[seat].selfies;
-  for (const c of COLOURS) s[c] -= pay[c];
-  emit({ type: EVENTS.SELFIE_SPEND, player: seat, pay: { ...pay }, cause });
-}
-
-function oneSelfie(colour, n = 1) {
-  const g = { green: 0, red: 0, orange: 0 };
-  g[colour] = n;
-  return g;
-}
-
-/** R9.2 - places a Crew into a hall with a new arrival stamp. */
-export function placeCrew(state, crew, hall, cause) {
-  crew.hall = hall;
-  crew.stamp = state.nextStamp++;
-  emit({ type: EVENTS.CREW_PLACED, player: crew.owner, crew: crew.id, hall, badge: crew.badge, stamp: crew.stamp, cause });
-}
-
-/**
- * R10.1-R10.4 - moves a Crew along a path of steps (path[0] = where it is).
- * The Usher bonus is paid at each crossing, before the next step, when the
- * mover moves their own Crew across their own Usher. New stamp on arrival.
- */
-export function moveCrewAlong(state, crew, path, mover, cause) {
-  const K = getConstants(state);
-  let crossed = 0;
-  let paid = 0;
-  for (let i = 1; i < path.length; i++) {
-    const rope = ropeBetween(path[i - 1], path[i]);
-    const owner = usherOwner(state, rope);
-    if (owner !== null) crossed++;
-    if (owner !== null && owner === mover && crew.owner === mover) {
-      paid++;
-      gainCoffee(state, mover, K.MOVEMENT.USHER_COFFEE_PER_CROSSING, 'usher', { detail: { rope, crew: crew.id } });
-    }
-  }
-  const from = crew.hall;
-  crew.hall = path[path.length - 1];
-  crew.stamp = state.nextStamp++;
-  emit({
-    type: EVENTS.CREW_MOVED,
-    player: mover,
-    owner: crew.owner,
-    crew: crew.id,
-    from,
-    to: crew.hall,
-    path: path.slice(),
-    ushersCrossed: crossed,
-    ushersPaid: paid,
-    jump: false,
-    cause,
-  });
-}
-
-/** R19.8 - draws one Achievement into a hand, reshuffling the discard if the deck is empty. */
-export function drawAchievement(state, seat, cause) {
-  const ach = state.achievements;
-  if (ach.deck.length === 0 && ach.discard.length > 0) {
-    ach.deck = shuffle(state.rng, ach.discard.map((d) => d.card));
-    ach.discard = [];
-    emit({ type: EVENTS.DECK_RESHUFFLED, deck: 'achievement', size: ach.deck.length });
-  }
-  if (ach.deck.length === 0) return null;
-  const card = ach.deck.pop();
-  state.players[seat].hand.push(card);
-  emit({ type: EVENTS.ACHIEVEMENT_DRAWN, player: seat, card, cause, secret: true });
-  return card;
-}
 
 /** R8.9 - counts one main action (Pass excluded) and flags the safety stop when it is reached. */
 function countMainAction(state, seat) {
@@ -221,6 +136,50 @@ export const MUTATORS = {
     countMainAction(state, frame.player);
     spendCoffee(state, frame.player, K.COSTS.COST_NEW_NOOB, 'newNoob');
     placeCrew(state, crewInSupply(state, frame.player)[0], a.hall, 'newNoob');
+  },
+  upgrade(state, frame, a) {
+    // R12.1-R12.2: pay 5, raise the badge one step, new arrival stamp.
+    const K = getConstants(state);
+    popFrame(state);
+    countMainAction(state, frame.player);
+    spendCoffee(state, frame.player, K.COSTS.COST_UPGRADE, 'upgrade');
+    upgradeCrew(state, crewById(state, a.crew), 'upgrade');
+  },
+  volunteer(state, frame, a) {
+    // R13.1: pay 2, place one Volunteer on an empty space.
+    const K = getConstants(state);
+    popFrame(state);
+    countMainAction(state, frame.player);
+    spendCoffee(state, frame.player, K.COSTS.COST_VOLUNTEER, 'volunteer');
+    placeVolunteer(state, frame.player, a.space, 'volunteer');
+  },
+  buySwag(state, frame, a) {
+    // R16.1-R16.5: pay the card's selfies (its own colour), take it, replace it, resolve it.
+    const K = getConstants(state);
+    const seat = frame.player;
+    popFrame(state);
+    countMainAction(state, seat);
+    const card = swagCard(a.card);
+    const cost = K.SWAG.SWAG_COST[a.card];
+    const slot = state.swag.market.indexOf(a.card);
+    spendSelfies(state, seat, oneSelfie(card.colour, cost), 'swag');
+    emit({ type: EVENTS.SWAG_BOUGHT, player: seat, card: a.card, colour: card.colour, cost, slot });
+    state.swag.market[slot] = null;
+    state.swag.discard.push(a.card);
+    refillSwagMarket(state, slot); // R16.5: the card just used is in the discard pile before any reshuffle
+    startEffect(state, seat, { kind: 'swag', card: a.card });
+  },
+  clubPower(state, frame, a) {
+    // R17.2, R17.5: pay the Club's coffee, mark it used this Hour, resolve it.
+    const seat = frame.player;
+    const p = state.players[seat];
+    popFrame(state);
+    countMainAction(state, seat);
+    const price = clubCost(state, p.club, a.option);
+    spendCoffee(state, seat, price, 'clubPower');
+    p.clubUsedThisHour = true;
+    emit({ type: EVENTS.CLUB_USED, player: seat, club: p.club, option: a.option, coffee: price });
+    startEffect(state, seat, { kind: 'club', card: p.club }, { option: a.option });
   },
   takeSelfie(state, frame, a) {
     const K = getConstants(state);
@@ -314,13 +273,48 @@ export const MUTATORS = {
   endConversions(state) {
     popFrame(state);
   },
+  // ----- card effect steps (cardeffects.js runs the card's own rule) -----
+  effectMove: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectMovePair: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectChooseCelebrity: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectPlaceCrew: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectPlaceVolunteer: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectMoveVolunteer: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectChooseHall: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectChooseCrew: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectSwap: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectGainSelfies: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectConvertSelfie: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectChooseAchievement: (state, frame, a) => applyEffectStep(state, frame, a),
+  effectDone: (state, frame, a) => applyEffectStep(state, frame, a),
+  // ----- variant-only decisions -----
+  placeOpeningCrew(state, frame, a) {
+    // R5.9.1 fallback: the owner places the overflow Crew as a New N00b would be (R11.2).
+    popFrame(state);
+    placeCrew(state, crewInSupply(state, frame.player)[0], a.hall, 'opening');
+  },
+  discardSelfie(state, frame, a) {
+    // R17.7 on: one Selfie at a time until the player is at the limit.
+    spendSelfies(state, frame.player, oneSelfie(a.colour), 'club-limit');
+    if (selfieTotal(state.players[frame.player].selfies) <= frame.limit) popFrame(state);
+  },
+  keepAchievement(state, frame, a) {
+    // R16.8 draw-two-keep-one: keep one of the two drawn; the other is discarded unscored and secret (R19.7).
+    popFrame(state);
+    state.players[frame.player].hand.push(a.card);
+    const other = frame.cards.find((c) => c !== a.card);
+    if (other !== undefined) {
+      state.achievements.discard.push({ card: other, owner: frame.player, scored: false });
+      emit({ type: EVENTS.ACHIEVEMENT_DISCARDED, player: frame.player, card: other, cause: 'swag', secret: true });
+    }
+  },
 };
 
 // ---------------------------------------------------------------------------
 // The Celebrity Walk (R20) - no decisions, resolved in one go.
 // ---------------------------------------------------------------------------
 
-/** R20.3 - a celebrity enters a hall: Prime Position, then Photographer. */
+/** R20.3 - a celebrity enters a hall: Prime Position, then Photographer. R4.3.4: the selfies are of the celebrity's own colour only. */
 function enterHall(state, entry, hall) {
   const K = getConstants(state);
   const prime = primeOwner(state, hall);
@@ -333,7 +327,10 @@ function enterHall(state, entry, hall) {
   }
 }
 
-/** R20.2-R20.6 - walk this Hour's celebrity (or both in Hour 5, interleaved, 5a first) and score. */
+/**
+ * R20.2-R20.6 - walk this Hour's celebrity (or both in Hour 5, interleaved, 5a first) and score.
+ * R20.1: the Walk needs no decisions. R20.7: nothing in it ever changes a queue (selfies and VP only).
+ */
 function resolveWalk(state) {
   const walkers = slotsOfHour(state, state.hour).filter((s) => s.status === 'onBoard');
   const progress = walkers.map((entry) => ({ entry, route: celebrityCard(entry.card).route, index: 0 }));
@@ -400,10 +397,32 @@ function stopAtEngineCap(state) {
   state.step = 'score';
 }
 
+/** R17.7 - the printed selfie limit of a seat's Club (applied only under clubHandLimits = on), or null. */
+function selfieLimit(state, seat) {
+  const K = getConstants(state);
+  const club = state.players[seat].club;
+  if (club === 'club_06') return K.LIMITS.CLUB_HAND_LIMIT_MILITIA;
+  if (club === 'club_07') return K.LIMITS.CLUB_HAND_LIMIT_TCG;
+  return null;
+}
+
+// R1.2, R6.1: an Hour is Coffee Break, On the Floor, Celebrity Walk, in that order; R5.10 Hour 1 begins with its Coffee Break
+// (setup ends in phase `coffeeBreak`, step `start`).
 function runFlow(state) {
   const K = getConstants(state);
   const n = state.players.length;
   switch (state.phase) {
+    case 'setup': {
+      // R5.9.1 fallback: each overflow opening Crew is placed by its owner, in opening order.
+      if (state.openingQueue.length > 0) {
+        const seat = state.openingQueue.shift();
+        pushFrame(state, { kind: 'openingPlacement', player: seat, remaining: state.openingQueue.length + 1 });
+        return;
+      }
+      state.phase = 'coffeeBreak';
+      state.step = 'start';
+      return;
+    }
     case 'coffeeBreak': {
       if (state.step === 'start') {
         startHour(state);
@@ -447,7 +466,16 @@ function runFlow(state) {
         return;
       }
       // 'turnEnd': the turn's decisions are all resolved.
-      // T9 hook: clubHandLimits = on (R26.2) pushes a `discardToLimit` frame here, once, before moving on.
+      // R17.7, variant clubHandLimits = on: a Meeple Militia / TCG Traders owner discards down to the printed limit
+      // at the end of their own turn. The frame ends at the limit, so this check passes next time round.
+      if (state.variants.clubHandLimits === 'on') {
+        const seat = state.turn.player;
+        const limit = selfieLimit(state, seat);
+        if (limit !== null && selfieTotal(state.players[seat].selfies) > limit) {
+          pushFrame(state, { kind: 'discardToLimit', player: seat, limit });
+          return;
+        }
+      }
       if (state.seq >= K.SAFETY.MAX_ENGINE_ACTIONS_PER_GAME) {
         stopAtEngineCap(state);
         return;

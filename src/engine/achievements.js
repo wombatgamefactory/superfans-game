@@ -7,7 +7,10 @@
 // know counts 0 and reports `implemented: false`: an unknown condition must
 // never pay (web-board-game skill, "Declarative Objective Cards").
 //
-// Counting is always for the scoring seat, on the live state (R19.3).
+// Counting is always for the scoring seat, on the live state (R19.3). R19.2: Achievements score at exactly three
+// moments - a pass (R18.2.3), Much Better (swag_orange_04) and final scoring (R22.3) - all in scoring.js / cardeffects.js.
+// R19.6: a printed maximum caps the count (scoring_03, scoring_17). R19.9: "your Crew" = Crew you own on the board,
+// "prime position" = position 1, "enemy Crew" = another player's, "workers"/"people" = Crew, "classes" = badges.
 
 import { getConstants } from './state.js';
 import {

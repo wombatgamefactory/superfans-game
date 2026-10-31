@@ -12,7 +12,7 @@ import { emit, EVENTS, VP_SOURCES } from './events.js';
 import { queue, seatsFrom, selfieTotal } from './queries.js';
 import { countAchievement } from './achievements.js';
 
-/** R1.5, R22.7 - adds VP to a seat with its source. Zero or less does nothing. */
+/** R1.5, R22.7 - adds VP to a seat with its source. Zero or less does nothing. R3.8: the score track is not capped. */
 export function addVp(state, seat, amount, source, detail = {}) {
   if (!(amount > 0)) return;
   if (!VP_SOURCES.includes(source)) throw new Error(`Engine bug: unknown VP source "${source}".`);

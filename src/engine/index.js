@@ -5,7 +5,8 @@
 // import each other in one direction:
 //
 //   data/cards, rng, events -> rules -> variants -> board -> state -> queries
-//     -> achievements -> scoring -> legality -> actions -> game -> index
+//     -> achievements -> scoring -> text -> primitives -> cardeffects -> legality
+//     -> actions -> game -> index
 //
 // The engine is 100% pure: no DOM, no console, no storage, no clock, no
 // unseeded randomness. State is plain JSON; the RNG is threaded through it.
@@ -33,6 +34,7 @@ export {
   STOP_ACTION_TYPES,
 } from './legality.js';
 export { scoreGame, destinationPayouts } from './scoring.js';
+export { EFFECTS, CLUB_OPTIONS, clubCost, clubAvailability } from './cardeffects.js';
 
 // State as a value
 export {

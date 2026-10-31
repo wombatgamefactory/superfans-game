@@ -29,21 +29,20 @@ import {
   hallName,
   ADJACENT,
   areAdjacent,
-  hallDistance,
   ENTRANCE,
   COLOURS,
+  VOLUNTEER_SPACES,
+  spaceById,
 } from './board.js';
 import {
   capacity,
   crewById,
-  hallCount,
   isFull,
   hasRoom,
   movePaths,
   newNoobHalls,
   crewInSupply,
   crewOnBoard,
-  queuePosition,
   scheduleOfCard,
   hasCrewIn,
   selfieTargets,
@@ -53,36 +52,25 @@ import {
   celebrityCard,
   achievementCard,
   clubCard,
-  ordinal,
+  swagCard,
   selfieTotal,
+  openQueryMemo,
+  closeQueryMemo,
+  emptySpaces,
+  volunteersOf,
 } from './queries.js';
 import { achievementValue } from './achievements.js';
+import { nameOf, plural, crewLabel, fullText, noPathReason, isSelfieObject, compositions, spaceLabel } from './text.js';
+import {
+  effectCandidates,
+  effectLabel,
+  effectCheck,
+  describeEffectAction,
+  CLUB_OPTIONS,
+  clubCost,
+  clubAvailability,
+} from './cardeffects.js';
 
-// ---------------------------------------------------------------------------
-// Small helpers for sentences
-// ---------------------------------------------------------------------------
-
-function nameOf(state, seat) {
-  return state.players[seat].name;
-}
-
-function plural(n, one, many) {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
-/** "your VIP in Main Hall (2nd)" */
-function crewLabel(state, crew, viewer) {
-  const whose = viewer === crew.owner ? 'your' : `${nameOf(state, crew.owner)}'s`;
-  if (crew.hall === null) return `${whose} ${crew.badge} in supply`;
-  return `${whose} ${crew.badge} in ${hallName(crew.hall)} (${ordinal(queuePosition(state, crew.id))})`;
-}
-
-function isSelfieObject(v, total) {
-  if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
-  const keys = Object.keys(v);
-  if (keys.length !== 3 || !COLOURS.every((c) => Number.isInteger(v[c]) && v[c] >= 0)) return false;
-  return total === undefined || selfieTotal(v) === total;
-}
 
 // ---------------------------------------------------------------------------
 // Families of action types, and which decision accepts which
@@ -96,7 +84,7 @@ export const MAIN_ACTION_TYPES = Object.freeze([
 /** R15.5 - the free conversions. They never end a turn or a conversion window by themselves. */
 export const CONVERSION_TYPES = Object.freeze(['exchange', 'strikeAPose', 'rareFinds']);
 
-/** Follow-up steps of Swag and Club effects (frame `effect`, task T9). */
+/** Follow-up steps of Swag and Club effects (frame `effect`, cardeffects.js). */
 export const EFFECT_STEP_TYPES = Object.freeze([
   'effectMove', 'effectMovePair', 'effectPlaceCrew', 'effectPlaceVolunteer', 'effectMoveVolunteer', 'effectChooseHall',
   'effectChooseCrew', 'effectChooseCelebrity', 'effectSwap', 'effectGainSelfies', 'effectConvertSelfie',
@@ -111,10 +99,10 @@ export const FRAME_ACCEPTS = Object.freeze({
   finalWindow: ['exchange', 'strikeAPose', 'endConversions'],
   passAchievement: ['scoreAchievement', 'discardAchievement'],
   moveSteps: ['moveStep', 'stopMoving'],
-  effect: [...EFFECT_STEP_TYPES], // T9
-  openingPlacement: ['placeOpeningCrew'], // T9, fivePlayerOpening = fallback
-  discardToLimit: ['discardSelfie'], // T9, clubHandLimits = on
-  achieverKeep: ['keepAchievement'], // T9, achiever = draw-two-keep-one
+  effect: [...EFFECT_STEP_TYPES], // R16.8, R17.6
+  openingPlacement: ['placeOpeningCrew'], // R5.9.1, fivePlayerOpening = fallback
+  discardToLimit: ['discardSelfie'], // R17.7, clubHandLimits = on
+  achieverKeep: ['keepAchievement'], // R16.8, achiever = draw-two-keep-one
 });
 
 /** The window a frame kind is, for conversion events and stats. */
@@ -165,35 +153,40 @@ function costBlock(state, seat, label, cost) {
   return have < cost ? `${label} costs ${cost} coffee and you have ${have}.` : null;
 }
 
-/** Common checks of "one of your Crew on the board". */
-function ownCrewBlock(state, seat, crewId) {
+/** Common checks of "one of your Crew on the board". `verb` words the message ("move", "upgrade"). */
+function ownCrewBlock(state, seat, crewId, verb = 'move') {
   const c = crewById(state, crewId);
   if (!c) return { reason: `There is no Crew "${crewId}".`, crew: null };
-  if (c.owner !== seat) return { reason: `That Crew is ${nameOf(state, c.owner)}'s; you may only move your own.`, crew: null };
-  if (c.hall === null) return { reason: 'That Crew is still in your supply; only Crew on the board can move.', crew: null };
+  if (c.owner !== seat) return { reason: `That Crew is ${nameOf(state, c.owner)}'s; you may only ${verb} your own.`, crew: null };
+  if (c.hall === null) return { reason: `That Crew is still in your supply; only Crew on the board can ${verb}.`, crew: null };
   return { reason: null, crew: c };
 }
 
-function fullText(state, hall) {
-  return `${hallName(hall)} is full (${hallCount(state, hall)} of ${capacity(state)})`;
+/**
+ * The block reason of every card-effect step (frame `effect`): the card's own
+ * check (cardeffects.js), then timing last. Without a pending effect frame
+ * there is nothing to judge, so the timing reason is the answer.
+ */
+function effectBlock(type) {
+  return (state, seat, a) => {
+    const top = topFrame(state);
+    if (top && top.kind === 'effect' && top.player === seat) {
+      const reason = effectCheck(state, top, a);
+      if (reason) return reason;
+    } else if (timingSuspended) {
+      return 'There is no card effect waiting for a choice.';
+    }
+    return timingBlock(state, seat, type);
+  };
 }
 
-/** R10.2 - why no path reaches `to` within `max` steps. */
-function noPathReason(state, crew, to, max, label) {
-  const d = hallDistance(crew.hall, to);
-  if (d > max) return `${hallName(to)} is ${d} halls from ${hallName(crew.hall)}; ${label} reaches at most ${plural(max, 'hall', 'halls')}.`;
-  if (isFull(state, to)) return `${fullText(state, to)}.`;
-  return `Every way from ${hallName(crew.hall)} to ${hallName(to)} within ${plural(max, 'hall', 'halls')} passes through a full hall (capacity ${capacity(state)}).`;
-}
-
-function notYet(label) {
-  return `${label} is not in this build yet.`;
+function effectDescribe(state, a) {
+  return describeEffectAction(state, topFrame(state), a);
 }
 
 // ---------------------------------------------------------------------------
-// The action catalogue. Every family the spec has is here; `implemented`
-// false marks the ones task T9 writes (their block reason refuses them and
-// getValidActions never offers them).
+// The action catalogue. Every action family of the spec is here, all
+// implemented (T9).
 // ---------------------------------------------------------------------------
 
 function selfieKey(s) {
@@ -276,16 +269,51 @@ export const ACTIONS = {
   upgrade: {
     params: ['crew'],
     rule: 'R12',
-    implemented: false,
-    block: () => notYet('Upgrade Crew'),
-    describe: (state, a) => `Upgrade ${a.crew} (${getConstants(state).COSTS.COST_UPGRADE} coffee)`,
+    implemented: true,
+    block: (state, seat, a) => {
+      const K = getConstants(state);
+      const p = state.players[seat];
+      const pre = mainActionBlock(state, seat, 'upgrade');
+      if (pre) return pre;
+      const cost = costBlock(state, seat, 'Upgrade Crew', K.COSTS.COST_UPGRADE);
+      if (cost) return cost;
+      const { reason, crew } = ownCrewBlock(state, seat, a.crew, 'upgrade');
+      if (reason) return reason;
+      // R12.1, R12.4: the hat or the box must be in supply; AAA is the top badge. A full hall does not matter (R9.5).
+      if (crew.badge === 'AAA') return `${crewLabel(state, crew, seat)} is already AAA, the top badge (R12.1).`;
+      if (crew.badge === 'N00b' && p.hats <= 0) return `You have no VIP hat left in your supply: all ${K.SUPPLY.HATS_PER_PLAYER} are on your Crew (R12.4).`;
+      if (crew.badge === 'VIP' && p.boxes <= 0) return 'You have no AAA box left in your supply: it is already on one of your Crew (R12.4).';
+      return timingBlock(state, seat, 'upgrade');
+    },
+    describe: (state, a) => {
+      const c = crewById(state, a.crew);
+      const to = c ? (c.badge === 'N00b' ? 'VIP' : 'AAA') : '?';
+      return `Upgrade ${c ? crewLabel(state, c, c.owner) : a.crew} to ${to} (${getConstants(state).COSTS.COST_UPGRADE} coffee)`;
+    },
   },
   volunteer: {
     params: ['space'],
     rule: 'R13.1',
-    implemented: false,
-    block: () => notYet('Volunteer'),
-    describe: (state, a) => `Place a Volunteer on ${a.space} (${getConstants(state).COSTS.COST_VOLUNTEER} coffee)`,
+    implemented: true,
+    block: (state, seat, a) => {
+      const K = getConstants(state);
+      const pre = mainActionBlock(state, seat, 'volunteer');
+      if (pre) return pre;
+      const cost = costBlock(state, seat, 'Volunteer', K.COSTS.COST_VOLUNTEER);
+      if (cost) return cost;
+      if (state.players[seat].volunteers <= 0) return `All ${K.SUPPLY.VOLUNTEERS_PER_PLAYER} of your Volunteers are on the board (R13.1).`;
+      if (emptySpaces(state).length === 0) return 'Every volunteer space is taken (R13.1).';
+      if (!spaceById(a.space)) return `"${a.space}" is not a volunteer space.`;
+      if (state.volunteers[a.space] !== null) {
+        return `${capitalise(spaceLabel(a.space))} already holds ${nameOf(state, state.volunteers[a.space])}'s Volunteer (R3.5).`;
+      }
+      return timingBlock(state, seat, 'volunteer');
+    },
+    describe: (state, a) => {
+      const sp = spaceById(a.space);
+      const role = sp ? { usher: 'an Usher', security: 'Security', photographer: 'a Photographer' }[sp.role] : 'a Volunteer';
+      return `Place ${role} on ${spaceLabel(a.space)} (${getConstants(state).COSTS.COST_VOLUNTEER} coffee)`;
+    },
   },
   takeSelfie: {
     params: ['celebrity'],
@@ -301,6 +329,7 @@ export const ACTIONS = {
       const card = celebrityCard(a.celebrity);
       if (!card) return `"${a.celebrity}" is not a celebrity.`;
       if (!entry || entry.status !== 'onBoard') return `${card.name} is not on the board.`;
+      // R14.2: queue position does not matter and whether the celebrity walks this Hour does not matter; R14.3: no limit on how often.
       if (!hasCrewIn(state, seat, entry.figure)) return `You have no Crew in ${hallName(entry.figure)}, where ${card.name} stands (R14.1).`;
       return timingBlock(state, seat, 'takeSelfie');
     },
@@ -314,16 +343,60 @@ export const ACTIONS = {
   buySwag: {
     params: ['card'],
     rule: 'R16',
-    implemented: false,
-    block: () => notYet('Swag'),
-    describe: (state, a) => `Take the Swag card ${a.card}`,
+    implemented: true,
+    block: (state, seat, a) => {
+      const K = getConstants(state);
+      const pre = mainActionBlock(state, seat, 'buySwag');
+      if (pre) return pre;
+      const card = swagCard(a.card);
+      if (!card) return `"${a.card}" is not a Swag card.`;
+      if (!state.swag.market.includes(a.card)) return `${card.name} is not in the Swag market.`;
+      // R16.2, R15.6: the cost is paid in Selfies of the card's own colour. R16.6: only one player can take a given market card.
+      const cost = K.SWAG.SWAG_COST[a.card];
+      const have = state.players[seat].selfies[card.colour];
+      if (have < cost) return `${card.name} costs ${plural(cost, `${card.colour} Selfie`, `${card.colour} Selfies`)} and you have ${have}.`;
+      return timingBlock(state, seat, 'buySwag');
+    },
+    describe: (state, a) => {
+      const card = swagCard(a.card);
+      if (!card) return `Take the Swag card ${a.card}`;
+      const cost = getConstants(state).SWAG.SWAG_COST[a.card];
+      return `Swag: ${card.name} (${plural(cost, `${card.colour} Selfie`, `${card.colour} Selfies`)}): ${card.text}`;
+    },
   },
   clubPower: {
     params: ['option'],
     rule: 'R17',
-    implemented: false,
-    block: () => notYet('Club Power'),
-    describe: (state, a) => `Use your Club power (${a.option})`,
+    implemented: true,
+    block: (state, seat, a) => {
+      const p = state.players[seat];
+      const pre = mainActionBlock(state, seat, 'clubPower');
+      if (pre) return pre;
+      if (p.club === null) return 'You have no Club card in this game, so there is no Club power to use (variant: Clubs off).';
+      // R17.1: the Club is the player's own, face up all game. R17.3: the two free-action Clubs are conversions, not here.
+      // R17.4: where a Club contradicts the rule book the card wins - on the point it states only (cardeffects.js).
+      const card = clubCard(p.club);
+      if (!CLUB_OPTIONS[p.club]) {
+        const power = p.club === 'club_07' ? 'Rare Finds (R17.6.7)' : 'Strike a Pose (R17.6.9)';
+        return `${power} is a free action: use it with your free conversions, not as your action for the turn.`;
+      }
+      if (!CLUB_OPTIONS[p.club].includes(a.option)) return `${card.name} offers: ${CLUB_OPTIONS[p.club].join(' or ')}.`;
+      // R17.5: once per Hour. Checked before the cost: a power already used cannot be used however much coffee you hold.
+      if (p.clubUsedThisHour) return `You have already used ${card.name} this Hour (once per Hour, R17.5).`;
+      const cost = costBlock(state, seat, card.power, clubCost(state, p.club, a.option));
+      if (cost) return cost;
+      const unavailable = clubAvailability(state, seat, p.club, a.option);
+      if (unavailable) return unavailable;
+      return timingBlock(state, seat, 'clubPower');
+    },
+    describe: (state, a) => {
+      const club = state.players[state.toAct ?? 0].club;
+      const card = club ? clubCard(club) : null;
+      if (!card || !CLUB_OPTIONS[club]) return `Use your Club power (${a.option})`;
+      const what =
+        club === 'club_01' ? `place a ${a.option === 'aaa' ? 'AAA' : 'VIP'} Crew` : club === 'club_04' ? (a.option === 'vp' ? 'VP for your Selfies' : '4 Selfies') : card.power;
+      return `${card.name}: ${what} (${clubCost(state, club, a.option)} coffee)`;
+    },
   },
   pass: {
     params: [],
@@ -392,7 +465,7 @@ export const ACTIONS = {
     },
   },
 
-  // ----- Move 1 Crew x3, later steps (R10.7) -----
+  // ----- Move 1 Crew x3, later steps (R10.7); also Rush! (swag_green_08) -----
   moveStep: {
     params: ['crew', 'to'],
     rule: 'R10.7',
@@ -421,7 +494,14 @@ export const ACTIONS = {
     rule: 'R10.7',
     implemented: true,
     stop: true,
-    block: (state, seat) => timingBlock(state, seat, 'stopMoving'),
+    block: (state, seat) => {
+      // R10.7, M14: at least one step must be made. (Move 1 Crew x3 makes its first step inside the action; Rush! does not.)
+      const top = topFrame(state);
+      if (top && top.kind === 'moveSteps' && top.player === seat && top.moved.length === 0) {
+        return `You must make at least one step (R10.7); a Crew can move 1 hall to a hall with room.`;
+      }
+      return timingBlock(state, seat, 'stopMoving');
+    },
     describe: () => 'Stop moving',
   },
 
@@ -432,6 +512,7 @@ export const ACTIONS = {
     rule: 'R15.2',
     implemented: true,
     block: (state, seat, a) => {
+      // R15.3: exchanges are free, never a main action, and repeatable any number of times within one conversion window
       const K = getConstants(state);
       const p = state.players[seat];
       const def = K.EXCHANGE[`EXCHANGE_${a.rate}`];
@@ -505,26 +586,70 @@ export const ACTIONS = {
     },
   },
 
-  // ----- Swag and Club effect steps (frame `effect`, T9) -----
-  effectMove: { params: ['crew', 'to'], rule: 'R16.4.2, R16.4.3', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Move ${a.crew} to ${hallName(a.to)}` },
-  effectMovePair: { params: ['crew', 'other', 'to'], rule: 'swag_green_09', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Move ${a.crew} and ${a.other} together to ${hallName(a.to)}` },
-  effectChooseCelebrity: { params: ['celebrity'], rule: 'swag_orange_03, R17.6.3', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Choose ${celebrityCard(a.celebrity) ? celebrityCard(a.celebrity).name : a.celebrity}` },
-  effectPlaceCrew: { params: ['hall'], rule: 'R16.4.1', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Place a Crew in ${hallName(a.hall)}` },
-  effectPlaceVolunteer: { params: ['space'], rule: 'R16.4.5', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Place a Volunteer on ${a.space}` },
-  effectMoveVolunteer: { params: ['from', 'to'], rule: 'R17.6.2', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Move your Volunteer from ${a.from} to ${a.to}` },
-  effectChooseHall: { params: ['hall'], rule: 'R16.8', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Choose ${hallName(a.hall)}` },
-  effectChooseCrew: { params: ['crew'], rule: 'R16.8', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Choose ${a.crew}` },
-  effectSwap: { params: ['crew', 'other'], rule: 'swag_orange_02', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Swap ${a.crew} and ${a.other}` },
-  effectGainSelfies: { params: ['gain'], rule: 'R16.8, R17.6', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Gain ${isSelfieObject(a.gain) ? formatSelfies(a.gain) : '?'}` },
-  effectConvertSelfie: { params: ['from', 'to'], rule: 'swag_orange_10', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Turn 1 ${a.from} Selfie into ${a.to}` },
-  effectChooseAchievement: { params: ['card'], rule: 'R16.8, R17.6.5', implemented: false, block: () => notYet('That card effect'), describe: (s, a) => `Choose ${achievementCard(a.card) ? achievementCard(a.card).name : a.card}` },
-  effectDone: { params: [], rule: 'R8.8', implemented: false, stop: true, block: () => notYet('That card effect'), describe: () => 'Done' },
+  // ----- Swag and Club effect steps (frame `effect`; cardeffects.js holds each card's rules) -----
+  effectMove: { params: ['crew', 'to'], rule: 'R16.4.2, R16.4.3', implemented: true, block: effectBlock('effectMove'), describe: effectDescribe },
+  effectMovePair: { params: ['crew', 'other', 'to'], rule: 'swag_green_09', implemented: true, block: effectBlock('effectMovePair'), describe: effectDescribe },
+  effectChooseCelebrity: { params: ['celebrity'], rule: 'swag_orange_03, R17.6.3', implemented: true, block: effectBlock('effectChooseCelebrity'), describe: effectDescribe },
+  effectPlaceCrew: { params: ['hall'], rule: 'R16.4.1, R17.6.1', implemented: true, block: effectBlock('effectPlaceCrew'), describe: effectDescribe },
+  effectPlaceVolunteer: { params: ['space'], rule: 'R16.4.5, R17.6.2', implemented: true, block: effectBlock('effectPlaceVolunteer'), describe: effectDescribe },
+  effectMoveVolunteer: { params: ['from', 'to'], rule: 'R17.6.2', implemented: true, block: effectBlock('effectMoveVolunteer'), describe: effectDescribe },
+  effectChooseHall: { params: ['hall'], rule: 'R16.8', implemented: true, block: effectBlock('effectChooseHall'), describe: effectDescribe },
+  effectChooseCrew: { params: ['crew'], rule: 'R16.8', implemented: true, block: effectBlock('effectChooseCrew'), describe: effectDescribe },
+  effectSwap: { params: ['crew', 'other'], rule: 'swag_orange_02', implemented: true, block: effectBlock('effectSwap'), describe: effectDescribe },
+  effectGainSelfies: { params: ['gain'], rule: 'R16.8, R17.6', implemented: true, block: effectBlock('effectGainSelfies'), describe: effectDescribe },
+  effectConvertSelfie: { params: ['from', 'to'], rule: 'swag_orange_10', implemented: true, block: effectBlock('effectConvertSelfie'), describe: effectDescribe },
+  effectChooseAchievement: { params: ['card'], rule: 'R16.8, R17.6.5', implemented: true, block: effectBlock('effectChooseAchievement'), describe: effectDescribe },
+  effectDone: { params: [], rule: 'R8.8', implemented: true, stop: true, block: effectBlock('effectDone'), describe: effectDescribe },
 
-  // ----- variant-only decisions (T9) -----
-  placeOpeningCrew: { params: ['hall'], rule: 'R5.9.1 fallback', implemented: false, block: () => notYet('The fallback opening'), describe: (s, a) => `Place an opening Crew in ${hallName(a.hall)}` },
-  discardSelfie: { params: ['colour'], rule: 'R17.7 on', implemented: false, block: () => notYet('Club hand limits'), describe: (s, a) => `Discard 1 ${a.colour} Selfie` },
-  keepAchievement: { params: ['card'], rule: 'swag_orange_07 draw-two-keep-one', implemented: false, block: () => notYet('Achiever (draw two, keep one)'), describe: (s, a) => `Keep ${achievementCard(a.card) ? achievementCard(a.card).name : a.card}` },
+  // ----- variant-only decisions -----
+  placeOpeningCrew: {
+    params: ['hall'],
+    rule: 'R5.9.1 fallback',
+    implemented: true,
+    block: (state, seat, a) => {
+      // R5.9.1 fallback: placed as a New N00b would be (R11.2).
+      if (!isHallId(a.hall)) return `"${a.hall}" is not a hall.`;
+      if (isFull(state, a.hall)) return `${fullText(state, a.hall)}.`;
+      if (!newNoobHalls(state).includes(a.hall)) {
+        if (hasRoom(state, ENTRANCE)) return 'The Entrance has room, so the Crew goes there (R11.2).';
+        return `A hall next to the Entrance (${ADJACENT[ENTRANCE].map(hallName).join(', ')}) has room, so the Crew goes to one of those (R11.2).`;
+      }
+      return timingBlock(state, seat, 'placeOpeningCrew');
+    },
+    describe: (state, a) => `Place your opening Crew in ${hallName(a.hall)}`,
+  },
+  discardSelfie: {
+    params: ['colour'],
+    rule: 'R17.7 on',
+    implemented: true,
+    block: (state, seat, a) => {
+      if (!COLOURS.includes(a.colour)) return 'Choose a colour to discard: green, red or orange.';
+      if (state.players[seat].selfies[a.colour] <= 0) return `You have no ${a.colour} Selfie to discard.`;
+      return timingBlock(state, seat, 'discardSelfie');
+    },
+    describe: (state, a) => `Discard 1 ${a.colour} Selfie`,
+  },
+  keepAchievement: {
+    params: ['card'],
+    rule: 'swag_orange_07 draw-two-keep-one',
+    implemented: true,
+    block: (state, seat, a) => {
+      const top = topFrame(state);
+      if (top && top.kind === 'achieverKeep' && top.player === seat && !top.cards.includes(a.card)) {
+        return 'Keep one of the two Achievements you just drew.';
+      }
+      return timingBlock(state, seat, 'keepAchievement');
+    },
+    describe: (state, a) => {
+      const card = achievementCard(a.card);
+      return `Keep ${card ? card.name : a.card} and discard the other`;
+    },
+  },
 };
+
+function capitalise(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 /** Action types the decision `stop`s, done or skip ("there was nothing to do here" when automatic). */
 export const STOP_ACTION_TYPES = Object.freeze(Object.keys(ACTIONS).filter((t) => ACTIONS[t].stop === true));
@@ -532,15 +657,6 @@ export const STOP_ACTION_TYPES = Object.freeze(Object.keys(ACTIONS).filter((t) =
 // ---------------------------------------------------------------------------
 // Candidates
 // ---------------------------------------------------------------------------
-
-/** Every { green, red, orange } with this total, in a fixed order. */
-function compositions(total) {
-  const out = [];
-  for (let g = total; g >= 0; g--) {
-    for (let r = total - g; r >= 0; r--) out.push({ green: g, red: r, orange: total - g - r });
-  }
-  return out;
-}
 
 function conversionCandidates(state, seat, kinds) {
   const K = getConstants(state);
@@ -567,6 +683,7 @@ function conversionCandidates(state, seat, kinds) {
 
 function mainCandidates(state, seat) {
   const K = getConstants(state);
+  const p = state.players[seat];
   const out = [];
   for (const c of crewOnBoard(state, seat)) {
     for (const to of Object.keys(movePaths(state, c, K.MOVEMENT.MOVE_2_MAX_STEPS, seat))) out.push({ type: 'move2', crew: c.id, to });
@@ -575,7 +692,17 @@ function mainCandidates(state, seat) {
     for (const to of ADJACENT[c.hall]) out.push({ type: 'move3', crew: c.id, to });
   }
   for (const hall of newNoobHalls(state)) out.push({ type: 'newNoob', hall });
+  for (const c of crewOnBoard(state, seat)) {
+    if (c.badge !== 'AAA') out.push({ type: 'upgrade', crew: c.id });
+  }
+  if (p.volunteers > 0 && p.coffee >= K.COSTS.COST_VOLUNTEER) {
+    for (const sp of emptySpaces(state)) out.push({ type: 'volunteer', space: sp.id });
+  }
   for (const s of selfieTargets(state, seat)) out.push({ type: 'takeSelfie', celebrity: s.card });
+  for (const card of state.swag.market) if (card !== null) out.push({ type: 'buySwag', card });
+  if (p.club !== null && CLUB_OPTIONS[p.club]) {
+    for (const option of CLUB_OPTIONS[p.club]) out.push({ type: 'clubPower', option });
+  }
   out.push({ type: 'pass' });
   return out;
 }
@@ -593,7 +720,11 @@ function keepLegal(state, seat, candidates) {
 // ---------------------------------------------------------------------------
 
 export const FRAMES = {
-  /** R8.1, R15.5 window 1. Frame: { kind, player, conversions, rareFindsUsed }. */
+  /**
+   * R8.1, R15.5 window 1. Frame: { kind, player, conversions, rareFindsUsed }.
+   * R1.15: a turn is free conversions then exactly one main action. R8.4: any main action may be repeated on any
+   * number of turns, as often as it can be afforded (nothing here limits it except the R8.9 safety stop).
+   */
   turn: {
     label: () => 'take your turn (free conversions, then one main action)',
     list: (state, f) => keepLegal(state, f.player, [...conversionCandidates(state, f.player, CONVERSION_TYPES), ...mainCandidates(state, f.player)]),
@@ -634,7 +765,7 @@ export const FRAMES = {
       ]);
     },
   },
-  /** R10.7. Frame: { kind, player, moved: [crew ids], max, source: 'move3' | swag card id }. */
+  /** R10.7, swag_green_08. Frame: { kind, player, moved: [crew ids], max, source: 'move3' | swag card id }. */
   moveSteps: {
     label: (state, f) => `move another Crew 1 hall (${f.moved.length} of ${f.max} moved), or stop`,
     list: (state, f) => {
@@ -647,14 +778,26 @@ export const FRAMES = {
       return keepLegal(state, f.player, cands);
     },
   },
-  /** T9: Swag and Club follow-up steps. Frame: { kind, player, source: { kind: 'swag'|'club', card }, step, data }. */
-  effect: { label: () => 'finish the card effect', list: () => [] },
-  /** T9: fivePlayerOpening = fallback. Frame: { kind, player, remaining }. */
-  openingPlacement: { label: () => 'place an opening Crew', list: () => [] },
-  /** T9: clubHandLimits = on. Frame: { kind, player, limit }. */
-  discardToLimit: { label: () => 'discard Selfies down to your Club limit', list: () => [] },
-  /** T9: achiever = draw-two-keep-one. Frame: { kind, player, cards }. */
-  achieverKeep: { label: () => 'keep one of the two Achievements drawn', list: () => [] },
+  /** R16.8, R17.6. Frame: { kind, player, source: { kind: 'swag'|'club', card }, step, data }. */
+  effect: {
+    label: (state, f) => effectLabel(state, f),
+    list: (state, f) => keepLegal(state, f.player, effectCandidates(state, f)),
+  },
+  /** R5.9.1 fallback. Frame: { kind, player, remaining }. */
+  openingPlacement: {
+    label: (state, f) => `place an opening Crew in a hall next to the Entrance (${f.remaining} left to place)`,
+    list: (state, f) => keepLegal(state, f.player, newNoobHalls(state).map((hall) => ({ type: 'placeOpeningCrew', hall }))),
+  },
+  /** R17.7 on. Frame: { kind, player, limit }. */
+  discardToLimit: {
+    label: (state, f) => `discard Selfies down to your Club limit of ${f.limit} (you hold ${selfieTotal(state.players[f.player].selfies)})`,
+    list: (state, f) => keepLegal(state, f.player, COLOURS.map((colour) => ({ type: 'discardSelfie', colour }))),
+  },
+  /** R16.8 draw-two-keep-one. Frame: { kind, player, cards: [2 ids] }. */
+  achieverKeep: {
+    label: () => 'keep one of the two Achievements you drew (the other is discarded)',
+    list: (state, f) => keepLegal(state, f.player, f.cards.map((card) => ({ type: 'keepAchievement', card }))),
+  },
 };
 
 /** What the pending decision asks, as a verb phrase. */
@@ -677,7 +820,13 @@ export function getValidActions(state) {
   if (state.phase === 'ended') return [];
   const frame = topFrame(state);
   if (frame === null) return [];
-  return FRAMES[frame.kind].list(state, frame);
+  // Hall counts and best paths are computed once for this whole pass (the state is not changed during it).
+  const opened = openQueryMemo(state);
+  try {
+    return FRAMES[frame.kind].list(state, frame);
+  } finally {
+    if (opened) closeQueryMemo();
+  }
 }
 
 /**

@@ -1,19 +1,20 @@
 // smoke.test.mjs - the engine survives whole games played by the random bot.
 // Exits 1 on any failure. Every figure printed is also asserted on.
 //
-// Runs:
-//   - 200 random-bot games on default variants, 50 each at 2, 3, 4 and 5 players
-//     (timed: this is the "200 random games" speed figure);
-//   - 24 random-bot games under EACH implemented non-default variant value, the
-//     player counts mixed;
+// Runs (T9: the whole rule set is in, so every action type, card and variant value is exercised):
+//   - 500 random-bot games on default variants, 125 each at 2, 3, 4 and 5 players (timed);
+//   - 24 random-bot games under EACH non-default variant value, the player counts mixed
+//     (all 12 variants, every value implemented);
+//   - 120 games under random COMBINATIONS of variant values;
 //   - a constants probe (COSTS.COST_MOVE_2 = 0) that makes Move 2 free, to show the
 //     R8.9 safety stop ends a degenerate Hour.
 //
 // Checked: every game ends by itself in Hour 5, ZERO refused proposals, never 0 or
 // exactly 1 legal action offered, invariants after every action (coffee within 0..12
-// under every-gain, no negative selfies, 8 Crew per player, no hall above capacity
-// except the opening's over-full Entrance, cards conserved: 40 Achievements, 36 Swag),
-// VP add up by source, and every implemented action type is chosen at least once.
+// under every-gain, no negative selfies, 8 Crew / 3 hats / 1 box / 6 Volunteers per
+// player accounted for, no hall above capacity except the opening's over-full Entrance,
+// cards conserved: 40 Achievements, 36 Swag), VP add up by source, and EVERY action
+// type (all 34) is chosen at least once.
 
 import assert from 'node:assert/strict';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -33,7 +34,13 @@ function checkInvariants(state, openingEntrance) {
     assert.ok(p.coffee >= 0, `${p.name} coffee ${p.coffee}`);
     if (state.variants.coffeeCap === 'every-gain') assert.ok(p.coffee <= K.LIMITS.COFFEE_CAP, `${p.name} coffee ${p.coffee} over the cap`);
     for (const c of E.COLOURS) assert.ok(p.selfies[c] >= 0, `${p.name} ${c} selfies`);
-    assert.ok(p.hand.length <= p.handSize, `${p.name} holds ${p.hand.length} Achievements`);
+    // R19.1: hand size 2 (+1 per Achiever); Longbox Legion holds up to 3 more until its discards are done
+    assert.ok(p.hand.length <= p.handSize + p.achieversUsed + (longboxPending(state, p.seat) ? 3 : 0), `${p.name} holds ${p.hand.length} Achievements`);
+    // R2.2: the pieces are limited and always accounted for
+    const mine = state.crew.filter((c) => c.owner === p.seat);
+    assert.equal(mine.filter((c) => c.badge !== 'N00b').length + p.hats, K.SUPPLY.HATS_PER_PLAYER, `${p.name} hats`);
+    assert.equal(mine.filter((c) => c.badge === 'AAA').length + p.boxes, K.SUPPLY.BOXES_PER_PLAYER, `${p.name} box`);
+    assert.equal(Object.values(state.volunteers).filter((v) => v === p.seat).length + p.volunteers, K.SUPPLY.VOLUNTEERS_PER_PLAYER, `${p.name} Volunteers`);
     let sum = 0;
     for (const s of E.VP_SOURCES) sum += p.vpBySource[s];
     assert.equal(sum, p.vp, `${p.name} VP by source`);
@@ -45,20 +52,41 @@ function checkInvariants(state, openingEntrance) {
     assert.ok(n <= limit, `${hall} holds ${n} (capacity ${C})`);
   }
   const ach = state.achievements;
-  assert.equal(ach.deck.length + ach.discard.length + state.players.reduce((a, p) => a + p.hand.length, 0), K.BOARD.ACHIEVEMENT_CARDS);
+  const aside = state.stack.filter((f) => f.kind === 'achieverKeep').reduce((a, f) => a + f.cards.length, 0);
+  assert.equal(ach.deck.length + ach.discard.length + aside + state.players.reduce((a, p) => a + p.hand.length, 0), K.BOARD.ACHIEVEMENT_CARDS);
   const sw = state.swag;
   assert.equal(sw.deck.length + sw.discard.length + sw.market.filter((x) => x !== null).length, K.BOARD.SWAG_CARDS);
 }
 
-function play(config, seed, botSeed) {
+/** Whether a Longbox Legion discard is pending for the seat. */
+function longboxPending(state, seat) {
+  return state.stack.some((f) => f.kind === 'effect' && f.player === seat && f.source.card === 'club_05');
+}
+
+/** A hoarder: random, but never spends selfies on exchanges and favours the actions that gain them (to reach the Club hand limits). */
+const hoarder = {
+  chooseAction(state, { rng }) {
+    const all = E.getValidActions(state);
+    const weighted = [];
+    for (const a of all) {
+      if (a.type === 'exchange') continue;
+      const w = ['clubPower', 'rareFinds', 'takeSelfie', 'strikeAPose'].includes(a.type) ? 6 : 1;
+      for (let i = 0; i < w; i++) weighted.push(a);
+    }
+    return E.rngPick(rng, weighted.length > 0 ? weighted : all);
+  },
+};
+
+function play(config, seed, botSeed, clubs = null, bot = randomBot) {
   const state = E.createGame(config, { seed });
+  if (clubs) clubs.slice(0, state.players.length).forEach((club, seat) => (state.players[seat].club = club)); // force Clubs (the engine reads them from the state)
   const opening = E.hallCount(state, E.ENTRANCE);
   const rng = E.makeRng(botSeed);
   let steps = 0;
   while (!E.isGameOver(state)) {
     const actions = E.getValidActions(state);
     assert.ok(actions.length >= 2, `${actions.length} legal actions left for a player`);
-    const a = randomBot.chooseAction(state, { rng });
+    const a = bot.chooseAction(state, { rng });
     chosenTypes[a.type] = (chosenTypes[a.type] ?? 0) + 1;
     try {
       E.applyAction(state, a, E.SILENT);
@@ -88,11 +116,11 @@ function run(name, fn) {
   }
 }
 
-run('200 random games on default variants (50 each at 2-5 players)', () => {
+run('500 random games on default variants (125 each at 2-5 players)', () => {
   const t0 = process.hrtime.bigint();
   let decisions = 0;
   const byCount = {};
-  for (let g = 0; g < 200; g++) {
+  for (let g = 0; g < 500; g++) {
     const n = 2 + (g % 4);
     const before = totals.decisions;
     const s = play({ playerCount: n }, `smoke-${g}`, `smoke-bot-${g}`);
@@ -101,7 +129,7 @@ run('200 random games on default variants (50 each at 2-5 players)', () => {
     (byCount[n] ??= []).push(sc.players.map((p) => p.vp));
   }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6;
-  console.log(`  200 random games: ${ms.toFixed(0)} ms (${(ms / 200).toFixed(1)} ms a game, invariants checked after every action), ${decisions} decisions`);
+  console.log(`  500 random games: ${ms.toFixed(0)} ms (${(ms / 500).toFixed(1)} ms a game, invariants checked after every action), ${decisions} decisions`);
   for (const n of Object.keys(byCount)) {
     const all = byCount[n].flat();
     const mean = all.reduce((a, b) => a + b, 0) / all.length;
@@ -110,7 +138,7 @@ run('200 random games on default variants (50 each at 2-5 players)', () => {
   }
 });
 
-run('24 random games under each implemented non-default variant value', () => {
+run('24 random games under each non-default variant value (all 12 variants)', () => {
   for (const v of E.VARIANTS) {
     for (const value of v.values.slice(1)) {
       if (!E.isVariantValueImplemented(v.name, value)) continue;
@@ -122,7 +150,26 @@ run('24 random games under each implemented non-default variant value', () => {
       }
     }
   }
-  console.log(`  variant runs done; unimplemented values skipped: ${JSON.stringify(E.UNIMPLEMENTED_VARIANT_VALUES)}`);
+  assert.deepEqual(E.UNIMPLEMENTED_VARIANT_VALUES, {}, 'every variant value is implemented');
+  console.log(`  variant runs done: ${E.VARIANTS.reduce((a, v) => a + v.values.length - 1, 0)} non-default values x 24 games`);
+});
+
+run('60 games with the hand-limit Clubs forced on (clubHandLimits = on): Meeple Militia and TCG Traders discard at turn end', () => {
+  for (let g = 0; g < 60; g++) {
+    const s = play({ playerCount: 2 + (g % 4), variants: { clubHandLimits: 'on', clubs: 'off' } }, `limits-${g}`, `lb-${g}`, ['club_06', 'club_07', 'club_09', 'club_04', 'club_08'], hoarder);
+    assert.equal(s.variants.clubHandLimits, 'on');
+    assert.ok(s.players[0].club === 'club_06', 'the forced Club is in place');
+  }
+});
+
+run('120 random games under random combinations of variant values', () => {
+  const rng = E.makeRng('combos');
+  for (let g = 0; g < 120; g++) {
+    const variants = {};
+    for (const v of E.VARIANTS) variants[v.name] = E.rngPick(rng, v.values);
+    play({ playerCount: 2 + (g % 4), variants }, `combo-${g}`, `cb-${g}`);
+  }
+  console.log('  120 combination games done');
 });
 
 run('constants probe: free Move 2 runs into the R8.9 safety stop and the game still ends', () => {
@@ -145,8 +192,10 @@ run('constants probe: free Move 2 runs into the R8.9 safety stop and the game st
   console.log(`  free Move 2: ${capped} of 4 games flagged turnCapped (R8.9) and finished`);
 });
 
-run('usage: every implemented action type was chosen at least once; zero refusals', () => {
+run('usage: all 34 action types were chosen at least once; zero refusals', () => {
   const implemented = Object.keys(E.ACTIONS).filter((t) => E.ACTIONS[t].implemented);
+  assert.equal(implemented.length, 34, 'all 34 action types are implemented');
+  assert.deepEqual(implemented.sort(), Object.keys(E.ACTIONS).sort());
   const missing = implemented.filter((t) => !chosenTypes[t]);
   assert.deepEqual(missing, [], `never chosen: ${missing.join(', ')}`);
   assert.equal(totals.refusals, 0);

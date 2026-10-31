@@ -6,6 +6,8 @@
 // (`config.constants`, simulator `--const.GROUP.NAME=value`) over `RULES`.
 // That is what lets a saved game replay under the numbers it was played with.
 //
+// R28.1-R28.3 (physical-game follow-ups) are work on the printed game, not on the rules, and have no code.
+//
 // Names are exactly the R27 constant names, grouped as R27.1 .. R27.18. Card
 // tables (celebrity values, laurels, swag costs) are derived from the
 // generated card data so the two can never disagree; the card data itself is
