@@ -9,17 +9,23 @@
 //   opts    { jitter = 0 } - a small random tiebreak added to every score
 //           (use it in simulations so identical bots do not mirror each
 //           other); { weights } - heuristic weight overrides (tuning only).
+//           Hard only (mctsBot.js, T15): { iterations } playouts per TURN in
+//           place of a clock; { timeBudgetMs, now } thinking time per TURN
+//           with an injected clock () => ms; { mcts } setting overrides.
 //
-// The action returned is always one of getValidActions(state). Easy and
-// Medium are synchronous. Hard is mapped to Medium until task T15 adds the
-// search bot; T15 will make it asynchronous, and callers should already ask
-// isAsyncLevel(level) before choosing how to call.
+// The action returned is always one of getValidActions(state). EVERY level is
+// synchronous (isAsyncLevel is false for all three). Hard with no clock and no
+// `iterations` uses its default allowance MCTS_SETTINGS.hardPlayouts, so the
+// simulator and tests call it exactly like Medium, deterministically. In the
+// browser the UI runs Hard in a Web Worker (bot-worker.js) with a clock and
+// a time budget, so the page never blocks; that wrapper is the Promise.
 //
 // Bots read only what a human in that seat could see: the heuristic bot runs
 // its lookahead on blindCopy(state, seat, rng) and never reads other seats'
 // Achievement hands (heuristicBot.js, "HIDDEN INFORMATION").
 
 import { chooseHeuristicAction } from './heuristicBot.js';
+import { chooseHardAction } from './mctsBot.js';
 import { chooseRandomAction } from './randomBot.js';
 import { rngNext } from '../engine/index.js';
 
@@ -30,13 +36,13 @@ export const BOT_LEVELS = Object.freeze(['easy', 'medium', 'hard']);
 export const BOT_LEVEL_INFO = Object.freeze({
   easy: Object.freeze({ label: 'Easy', description: 'Knows the rules and chases the celebrity in front of it, but plays loosely and makes mistakes.' }),
   medium: Object.freeze({ label: 'Medium', description: 'Plans for every celebrity on the schedule, times its pass and keeps its best Achievement for the final triple.' }),
-  hard: Object.freeze({ label: 'Hard', description: 'For now plays as Medium; a thinking bot is on the way.' }),
+  hard: Object.freeze({ label: 'Hard', description: 'Plays each turn forward many times to see how its best ideas work out before it moves. About a second a turn.' }),
 });
 
-/** Hard maps to Medium until T15 replaces it. */
-const LEVEL_TO_HEURISTIC = Object.freeze({ easy: 'easy', medium: 'medium', hard: 'medium' });
+/** The heuristic level behind easy and medium (hard is the search, mctsBot.js). */
+const LEVEL_TO_HEURISTIC = Object.freeze({ easy: 'easy', medium: 'medium' });
 
-/** Whether a level's chooseAction returns a Promise. False for every level until T15. */
+/** Whether a level's chooseAction returns a Promise. False for every level: Hard is synchronous too (the browser wraps it in a Web Worker). */
 export function isAsyncLevel(level) {
   checkLevel(level);
   return false;
@@ -64,6 +70,10 @@ function toRand(rng) {
  */
 export function chooseAction(state, level, rng, opts = {}) {
   checkLevel(level);
+  if (level === 'hard') {
+    if (!(typeof rng === 'function' || (rng && typeof rng.s === 'number'))) toRand(rng); // same error as the other levels
+    return chooseHardAction(state, { ...opts, rng });
+  }
   const rand = toRand(rng);
   return chooseHeuristicAction(state, { ...opts, level: LEVEL_TO_HEURISTIC[level], rng: rand });
 }
@@ -94,3 +104,4 @@ export function getBot(level, opts = {}) {
 }
 
 export { scoreValidActions, rolloutPolicy, HEURISTIC_WEIGHTS, LEVEL_SETTINGS } from './heuristicBot.js';
+export { MCTS_SETTINGS, search as searchHard } from './mctsBot.js';

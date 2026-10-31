@@ -39,5 +39,52 @@ export function botLevels() {
 /** An action (or a Promise of one) for state.toAct. */
 export function chooseBotAction(state, level, rng) {
   if (!impl) throw new Error('The bots are not loaded yet.');
+  if (level === 'hard' && impl.real) {
+    const w = hardWorker();
+    if (w !== null) return askWorker(w, state, level, rng);
+  }
   return impl.choose(state, level, rng);
+}
+
+// T15: Hard (the search bot) thinks in a Web Worker (src/bots/bot-worker.js)
+// with a clock and its default time budget per turn, so the page never
+// freezes. If workers are unavailable or the worker fails, Hard runs inline
+// (synchronously, on its fixed playout allowance) instead.
+let worker = null;
+let workerBroken = false;
+let nextId = 1;
+const pending = new Map();
+
+function hardWorker() {
+  if (workerBroken || typeof Worker === 'undefined') return null;
+  if (worker !== null) return worker;
+  try {
+    worker = new Worker(new URL('../bots/bot-worker.js', import.meta.url), { type: 'module' });
+  } catch {
+    workerBroken = true;
+    return null;
+  }
+  worker.onmessage = (event) => {
+    const reply = event.data;
+    const p = pending.get(reply.id);
+    if (!p) return;
+    pending.delete(reply.id);
+    if (reply.ok) p.resolve(reply.action);
+    else p.reject(new Error(reply.error));
+  };
+  worker.onerror = () => {
+    workerBroken = true;
+    worker = null;
+    for (const p of pending.values()) p.reject(new Error('The Hard bot worker failed; Hard now thinks on the page.'));
+    pending.clear();
+  };
+  return worker;
+}
+
+function askWorker(w, state, level, rng) {
+  const id = nextId++;
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    w.postMessage({ id, state, level, seed: rng && typeof rng.s === 'number' ? rng.s : id });
+  });
 }
