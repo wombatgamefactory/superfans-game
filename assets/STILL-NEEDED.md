@@ -9,15 +9,9 @@ Generate with `/generate-art` (project art skill `superfans-art`, house claymati
 
 | Manifest id | Status | What is needed | Suggested generate-art subject |
 |---|---|---|---|
-| `placeholder-figure-celebrity-green` | placeholder | Transparent cut-out standee figure on a green base, one per celebrity colour (the 18 portraits exist only on scene backdrops) | Claymation convention celebrity standee on a green round base, full body, transparent or plain background, 3/4 view, in the house clay style |
-| `placeholder-figure-celebrity-red` | placeholder | Transparent cut-out standee figure on a red base, one per celebrity colour (the 18 portraits exist only on scene backdrops) | Claymation convention celebrity standee on a red round base, full body, transparent or plain background, 3/4 view, in the house clay style |
-| `placeholder-figure-celebrity-orange` | placeholder | Transparent cut-out standee figure on a orange base, one per celebrity colour (the 18 portraits exist only on scene backdrops) | Claymation convention celebrity standee on a orange round base, full body, transparent or plain background, 3/4 view, in the house clay style |
-| `placeholder-marker-first-player` | placeholder | First Player marker (3D model only: 'jumbo worker.stl') | A big gold clay Crew meeple wearing a tiny crown or sash, on a plain background, claymation style |
-| `placeholder-overlay-vip-hat` | placeholder | VIP hat overlay (3D only: Hats v1.3mf). The badge ticket can be used meanwhile | A small clay top hat in gold, front view, plain background, claymation style, to sit on a meeple |
-| `placeholder-overlay-aaa-box` | placeholder | AAA box/pedestal overlay (3D only). The badge ticket can be used meanwhile | A small red clay star-shaped podium box for a meeple to stand on, plain background, claymation style |
-| `placeholder-marker-pass` | missing | Pass marker: trivially a player-coloured disc drawn in code | Small clay disc marker, plain background |
-| `placeholder-marker-score` | missing | Score marker: player-coloured disc/cube drawn in code | Small clay cube marker, plain background |
-| `placeholder-marker-hour` | missing | Hour markers 1-5 (12pm to 4pm): draw in code; Clock Faces.psd has type only | Five clay clock-face discs reading 12 to 4, plain background |
+| `placeholder-marker-pass` | missing | Pass marker: trivially a player-coloured disc drawn in code | (deferred) code-drawn: a CSS disc beats a clay disc at 24 px |
+| `placeholder-marker-score` | missing | Score marker: player-coloured disc/cube drawn in code | (deferred) code-drawn: a CSS cube or disc in the seat colour |
+| `placeholder-marker-hour` | missing | Hour markers 1-5 (12pm to 4pm): draw in code; Clock Faces.psd has type only | (deferred) code-drawn: clay sign plate plus live text (Clock Faces.psd has type only) |
 
 ## Open art decisions
 

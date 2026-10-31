@@ -1589,6 +1589,18 @@
    "usedIn": "landing page, splash"
   },
   {
+   "id": "figure-celebrity-neutral",
+   "file": "figures/celebrity-neutral.webp",
+   "width": 335,
+   "height": 720,
+   "bytes": 35598,
+   "status": "real",
+   "source": "AI-Art/celebrity-standee-neutral-v1.png",
+   "shows": "Transparent cut-out clay celebrity guest (waving, grey blazer, lanyard) walking on a neutral light-grey round base",
+   "usedIn": "celebrity token walking the hall route; one neutral figure for all three celebrity colours",
+   "notes": "ONE neutral figure for every celebrity colour (colours are not yet ruled). The base is neutral grey, so a colour can be shown by a CSS ring/glow, a coloured disc behind it, or a mix-blend tint; the figure itself is the same for every celebrity. Aspect 0.47."
+  },
+  {
    "id": "hall-artists-alley",
    "file": "halls/hall-artists-alley.webp",
    "width": 620,
@@ -2083,37 +2095,37 @@
    "notes": "Celebrity colours are an open ruling (D3). Green and orange are recoloured by script from the red chair."
   },
   {
-   "id": "placeholder-figure-celebrity-green",
-   "file": "placeholders/placeholder-figure-celebrity-green.webp",
-   "width": 256,
-   "height": 480,
-   "bytes": 10572,
-   "status": "placeholder",
-   "source": "generated placeholder (tools/build-assets.py)",
-   "shows": "Cut-out celebrity figure on a green base",
-   "usedIn": "celebrity token walking the hall route"
+   "id": "marker-first-player",
+   "file": "markers/first-player.webp",
+   "width": 266,
+   "height": 360,
+   "bytes": 18864,
+   "status": "real",
+   "source": "AI-Art/first-player-marker-v1.png",
+   "shows": "Transparent cut-out gold clay Crew meeple with a red sash and a little crown",
+   "usedIn": "First Player marker beside the player panel / Entrance"
   },
   {
-   "id": "placeholder-figure-celebrity-orange",
-   "file": "placeholders/placeholder-figure-celebrity-orange.webp",
-   "width": 256,
-   "height": 480,
-   "bytes": 10634,
-   "status": "placeholder",
-   "source": "generated placeholder (tools/build-assets.py)",
-   "shows": "Cut-out celebrity figure on a orange base",
-   "usedIn": "celebrity token walking the hall route"
+   "id": "overlay-aaa-box",
+   "file": "overlays/aaa-box.webp",
+   "width": 247,
+   "height": 256,
+   "bytes": 15628,
+   "status": "real",
+   "source": "AI-Art/aaa-podium-overlay-v1.png",
+   "shows": "Transparent cut-out red clay winner's block with a gold star on the front, three-quarter view",
+   "usedIn": "AAA Crew rendering: place the Crew piece on top (scale to the piece width)"
   },
   {
-   "id": "placeholder-figure-celebrity-red",
-   "file": "placeholders/placeholder-figure-celebrity-red.webp",
+   "id": "overlay-vip-hat",
+   "file": "overlays/vip-hat.webp",
    "width": 256,
-   "height": 480,
-   "bytes": 10606,
-   "status": "placeholder",
-   "source": "generated placeholder (tools/build-assets.py)",
-   "shows": "Cut-out celebrity figure on a red base",
-   "usedIn": "celebrity token walking the hall route"
+   "height": 234,
+   "bytes": 13980,
+   "status": "real",
+   "source": "AI-Art/vip-hat-overlay-v1.png",
+   "shows": "Transparent cut-out gold clay top hat with a dark red band, front view",
+   "usedIn": "VIP Crew rendering: sit on a Crew piece's head (scale to about 60% of the piece width)"
   },
   {
    "id": "placeholder-generic",
@@ -2125,17 +2137,6 @@
    "source": "generated placeholder (tools/build-assets.py)",
    "shows": "Generic stand-in when an id has no art",
    "usedIn": "any broken image"
-  },
-  {
-   "id": "placeholder-marker-first-player",
-   "file": "placeholders/placeholder-marker-first-player.webp",
-   "width": 256,
-   "height": 256,
-   "bytes": 6646,
-   "status": "placeholder",
-   "source": "generated placeholder (tools/build-assets.py)",
-   "shows": "First Player marker",
-   "usedIn": "start-of-Hour first player token"
   },
   {
    "id": "placeholder-marker-hour",
@@ -2172,28 +2173,6 @@
    "shows": "score marker",
    "usedIn": "draw in code (shown only if code does not)",
    "notes": "status 'missing': the UI should draw this in code; this file only prevents a broken image"
-  },
-  {
-   "id": "placeholder-overlay-aaa-box",
-   "file": "placeholders/placeholder-overlay-aaa-box.webp",
-   "width": 256,
-   "height": 256,
-   "bytes": 6462,
-   "status": "placeholder",
-   "source": "generated placeholder (tools/build-assets.py)",
-   "shows": "AAA box for a Crew piece",
-   "usedIn": "AAA Crew rendering"
-  },
-  {
-   "id": "placeholder-overlay-vip-hat",
-   "file": "placeholders/placeholder-overlay-vip-hat.webp",
-   "width": 256,
-   "height": 256,
-   "bytes": 6266,
-   "status": "placeholder",
-   "source": "generated placeholder (tools/build-assets.py)",
-   "shows": "VIP hat for a Crew piece",
-   "usedIn": "VIP Crew rendering"
   },
   {
    "id": "portrait-celebrity-mando-01",

@@ -25,7 +25,8 @@ from datetime import date
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from scipy import ndimage as ndi
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 REPO = Path(__file__).resolve().parent.parent
 PARENT = REPO.parent
@@ -475,31 +476,59 @@ def build_psd_logo():
         "landing page hero, title screen")
 
 
+# ---------------------------------------------------------------- generated art (T6): cut out of plain-white-background Gemini renders
+def cutout(img, lum_min=212, sat_max=28):
+    """Remove a plain white studio background: flood from the border over near-white, low-saturation pixels,
+    keep the biggest remaining blob, fill holes, erode 1 px and feather. lum_min/sat_max tune what counts as
+    background (saturated clay objects use sat_max 60 and lum_min 120 so the grey floor shadow goes too)."""
+    rgb = np.asarray(img.convert("RGB")).astype(np.int16)
+    lum, sat = rgb.mean(axis=2), rgb.max(axis=2) - rgb.min(axis=2)
+    lab, _ = ndi.label((lum >= lum_min) & (sat <= sat_max))
+    border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    fg = ndi.binary_opening(~np.isin(lab, list(border)), iterations=2)
+    lab2, n2 = ndi.label(fg)
+    if n2 > 1:
+        fg = lab2 == 1 + int(np.argmax(ndi.sum(fg, lab2, range(1, n2 + 1))))
+    fg = ndi.binary_erosion(ndi.binary_fill_holes(fg), iterations=1)
+    alpha = Image.fromarray((fg * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2))
+    out = img.convert("RGBA")
+    out.putalpha(alpha)
+    return trim_alpha(out, pad=2)
+
+
+GENERATED = [  # id, AI-Art file, output file, max side, cutout args, shows, used in, notes
+    ("figure-celebrity-neutral", "AI-Art/celebrity-standee-neutral-v1.png", "figures/celebrity-neutral.webp", 720, (212, 28),
+     "Transparent cut-out clay celebrity guest (waving, grey blazer, lanyard) walking on a neutral light-grey round base",
+     "celebrity token walking the hall route; one neutral figure for all three celebrity colours",
+     "ONE neutral figure for every celebrity colour (colours are not yet ruled). The base is neutral grey, so a colour can be shown "
+     "by a CSS ring/glow, a coloured disc behind it, or a mix-blend tint; the figure itself is the same for every celebrity. Aspect 0.47."),
+    ("marker-first-player", "AI-Art/first-player-marker-v1.png", "markers/first-player.webp", 360, (120, 60),
+     "Transparent cut-out gold clay Crew meeple with a red sash and a little crown", "First Player marker beside the player panel / Entrance", None),
+    ("overlay-vip-hat", "AI-Art/vip-hat-overlay-v1.png", "overlays/vip-hat.webp", 256, (120, 60),
+     "Transparent cut-out gold clay top hat with a dark red band, front view",
+     "VIP Crew rendering: sit on a Crew piece's head (scale to about 60% of the piece width)", None),
+    ("overlay-aaa-box", "AI-Art/aaa-podium-overlay-v1.png", "overlays/aaa-box.webp", 256, (120, 60),
+     "Transparent cut-out red clay winner's block with a gold star on the front, three-quarter view",
+     "AAA Crew rendering: place the Crew piece on top (scale to the piece width)", None),
+]
+
+
+def build_generated():
+    for id_, src, fn, side, (lm, sm), shows, used, notes in GENERATED:
+        img = cutout(open_src(src), lm, sm)
+        add(id_, fn, fit_webp(img, fn, max_side=side), "real", src, shows, used, first_paint=False, notes=notes)
+
+
 # ---------------------------------------------------------------- placeholders for what is missing
 def build_placeholders():
     sq = (256, 256)
     add_placeholder("placeholder-generic", "image missing", (256, 256), "placeholder", "Generic stand-in when an id has no art",
                     "any broken image", "(fallback only)", "-")
     still_needed.pop()   # the generic one is not a gap
-    for colour in ("green", "red", "orange"):
-        add_placeholder(f"placeholder-figure-celebrity-{colour}", f"celebrity figure {colour}", (256, 480), "placeholder",
-                        f"Cut-out celebrity figure on a {colour} base", "celebrity token walking the hall route",
-                        f"Transparent cut-out standee figure on a {colour} base, one per celebrity colour (the 18 portraits exist only on scene backdrops)",
-                        f"Claymation convention celebrity standee on a {colour} round base, full body, transparent or plain background, 3/4 view, in the house clay style")
-    add_placeholder("placeholder-marker-first-player", "first player marker", sq, "placeholder",
-                    "First Player marker", "start-of-Hour first player token",
-                    "First Player marker (3D model only: 'jumbo worker.stl')",
-                    "A big gold clay Crew meeple wearing a tiny crown or sash, on a plain background, claymation style")
-    add_placeholder("placeholder-overlay-vip-hat", "VIP hat overlay", sq, "placeholder", "VIP hat for a Crew piece",
-                    "VIP Crew rendering", "VIP hat overlay (3D only: Hats v1.3mf). The badge ticket can be used meanwhile",
-                    "A small clay top hat in gold, front view, plain background, claymation style, to sit on a meeple")
-    add_placeholder("placeholder-overlay-aaa-box", "AAA box overlay", sq, "placeholder", "AAA box for a Crew piece",
-                    "AAA Crew rendering", "AAA box/pedestal overlay (3D only). The badge ticket can be used meanwhile",
-                    "A small red clay star-shaped podium box for a meeple to stand on, plain background, claymation style")
     for id_, label, desc, prompt in [
-        ("placeholder-marker-pass", "pass marker", "Pass marker: trivially a player-coloured disc drawn in code", "Small clay disc marker, plain background"),
-        ("placeholder-marker-score", "score marker", "Score marker: player-coloured disc/cube drawn in code", "Small clay cube marker, plain background"),
-        ("placeholder-marker-hour", "hour markers 1-5", "Hour markers 1-5 (12pm to 4pm): draw in code; Clock Faces.psd has type only", "Five clay clock-face discs reading 12 to 4, plain background"),
+        ("placeholder-marker-pass", "pass marker", "Pass marker: trivially a player-coloured disc drawn in code", "(deferred) code-drawn: a CSS disc beats a clay disc at 24 px"),
+        ("placeholder-marker-score", "score marker", "Score marker: player-coloured disc/cube drawn in code", "(deferred) code-drawn: a CSS cube or disc in the seat colour"),
+        ("placeholder-marker-hour", "hour markers 1-5", "Hour markers 1-5 (12pm to 4pm): draw in code; Clock Faces.psd has type only", "(deferred) code-drawn: clay sign plate plus live text (Clock Faces.psd has type only)"),
     ]:
         add_placeholder(id_, label, (192, 192), "missing", label, "draw in code (shown only if code does not)", desc, prompt,
                         notes="status 'missing': the UI should draw this in code; this file only prevents a broken image")
@@ -558,6 +587,7 @@ def main():
         build_psd_standees()
         build_psd_icons()
         build_psd_logo()
+    build_generated()
     build_placeholders()
     entries.sort(key=lambda e: e["id"])
     write_manifest(colours)
