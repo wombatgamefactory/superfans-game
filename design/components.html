@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Superfans mock-up - Components</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../style.css">
+<style>
+  /* sheet layout only - not part of the design system */
+  .ds { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 28px; }
+  .ds h1 { font-size: 44px; }
+  .ds h2 { font-size: 26px; margin-bottom: 10px; }
+  .ds p.note { margin: 0 0 12px; color: var(--ink-soft); font-size: 14px; max-width: 900px; }
+  .ds-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .ds-cell { display: grid; gap: 6px; justify-items: start; }
+  .ds-cap { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); }
+  .ds-sw { width: 120px; border-radius: 12px; overflow: hidden; background: var(--paper); box-shadow: var(--clay-drop); font-size: 11px; font-weight: 800; }
+  .ds-sw span { display: block; height: 52px; }
+  .ds-sw div { padding: 6px 8px; }
+  .ds-halls { container: board / inline-size; width: min(1000px, 100%); display: grid; grid-template-columns: repeat(3, 29%); gap: 3%; padding: 24px; border-radius: 24px; background: var(--floor); }
+  .ds-halls .sf-hall { aspect-ratio: 1; }
+  .ds-stage { position: relative; height: 150px; border-radius: 16px; background: var(--floor); overflow: hidden; }
+  .ds-mini-handover { position: relative; height: 260px; border-radius: 16px; overflow: hidden; }
+  .ds-mini-handover .sf-handover { position: absolute; }
+</style>
+</head>
+<body>
+<main class="ds">
+  <header>
+    <h1>Superfans design system</h1>
+    <p class="note">Every component the UI needs, rendered from <code>style.css</code>. Class names are the contract for T14. Hover cards, buttons and halls to see the hover states.</p>
+  </header>
+
+  <section>
+    <h2>Palette</h2>
+    <p class="note">Warm carpet and clay-paper neutrals; one accent per UI zone; lime highlight (a hue the art never uses); celebrity colours always paired with a symbol.</p>
+    <div class="ds-row" id="swatches"></div>
+  </section>
+
+  <section>
+    <h2>Type</h2>
+    <div class="ds-row" style="align-items:baseline">
+      <span style="font-family:var(--font-display);font-size:56px">Lilita One</span>
+      <span style="font-family:var(--font-display);font-size:28px">Hall signs, titles, numbers</span>
+      <span style="font-size:20px;font-weight:800">Nunito 800 for UI labels</span>
+      <span style="font-size:16px">Nunito 600 for body text and log lines</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Buttons, cost chips, status chips</h2>
+    <div class="ds-row">
+      <button class="sf-btn">Default</button>
+      <button class="sf-btn sf-btn--primary">Primary</button>
+      <button class="sf-btn sf-btn--go sf-btn--big">Open the doors!</button>
+      <button class="sf-btn sf-btn--ghost">Ghost</button>
+      <button class="sf-btn" disabled title="Nothing to undo">Disabled</button>
+      <span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">4</span>
+      <span class="sf-cost sf-cost--short"><img src="../assets/icons/coffee.webp" alt="">5</span>
+      <span class="sf-cost sf-cost--free">Free</span>
+      <span class="sf-cost sf-cost--selfie"><img src="../assets/icons/selfie-red.webp" alt="">2</span>
+      <span class="sf-chip sf-chip--human">Human</span>
+      <span class="sf-chip sf-chip--bot">Hard bot</span>
+      <span class="sf-chip">Passed</span>
+      <span class="sf-chip sf-chip--hi">Your turn</span>
+      <span class="sf-chip sf-chip--bad">Full 8/8</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Action buttons</h2>
+    <p class="note">States: ready, armed (mode entered; click again to cancel), legal-highlight (a follow-up choice), disabled with the engine's block reason in <code>title</code> and, on touch layouts, a visible <code>.sf-action__why</code> line.</p>
+    <div class="ds-row" style="max-width:820px">
+      <div class="sf-actions" style="width:100%">
+        <button class="sf-action"><img class="sf-action__icon" src="../assets/icons/footprints.webp" alt=""><span class="sf-action__label">Move 2</span><span class="sf-action__sub">One Crew, up to 2 halls</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">1</span></button>
+        <button class="sf-action is-armed"><img class="sf-action__icon" src="../assets/icons/move-arrows.webp" alt=""><span class="sf-action__label">Move 1 Crew x3</span><span class="sf-action__sub">Armed - pick a Crew</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">3</span></button>
+        <button class="sf-action" aria-disabled="true" title="Upgrade needs 5 coffee - you have 4."><img class="sf-action__icon" src="../assets/overlays/vip-hat.webp" alt=""><span class="sf-action__label">Upgrade</span><span class="sf-action__sub">N00b to VIP, VIP to AAA</span><span class="sf-cost sf-cost--short"><img src="../assets/icons/coffee.webp" alt="">5</span><span class="sf-action__why">Needs 5 coffee - you have 4.</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lanyard player panels</h2>
+    <p class="note">Active (expanded: coffee dial, selfies, supply, hand) and compact. On tablet the compact head is used in a horizontal strip and the stats move to the side panel.</p>
+    <div class="ds-row" id="lanyards"></div>
+  </section>
+
+  <section>
+    <h2>Coffee dial, selfies, pieces and markers</h2>
+    <div class="ds-row" id="pieces"></div>
+  </section>
+
+  <section>
+    <h2>Halls: highlight states</h2>
+    <p class="note">Legal (lime ring and pulse, inline tag), illegal but clickable (red dashed ring; click explains), dimmed (out of scope this step), selected, source. Hall names come from data on the clay plate. Queue = serpentine rope line, 1-4 then 8-5; slot 1 is Prime Position (gold star).</p>
+    <div class="ds-halls" id="halls"></div>
+  </section>
+
+  <section>
+    <h2>Side panels</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px" id="panels"></div>
+  </section>
+
+  <section>
+    <h2>Cards (small and medium)</h2>
+    <div class="ds-row">
+      <div class="ds-cell"><div class="sf-card sf-card--sm sf-card--zoom"><img src="../assets/cards/achievement-05.webp" alt=""></div><span class="ds-cap">Achievement sm</span></div>
+      <div class="ds-cell"><div class="sf-card sf-card--sm is-legal"><img src="../assets/cards/swag-orange-03.webp" alt=""></div><span class="ds-cap">Swag sm, legal</span></div>
+      <div class="ds-cell"><div class="sf-card sf-card--sm is-illegal" title="Needs 2 green Selfies - you have 1."><img src="../assets/cards/swag-green-06.webp" alt=""></div><span class="ds-cap">Swag sm, can't pay</span></div>
+      <div class="ds-cell"><div class="sf-card sf-card--md"><img src="../assets/cards/club-05.webp" alt=""></div><span class="ds-cap">Club md</span></div>
+      <div class="ds-cell"><div class="sf-card sf-card--md"><img src="../assets/cards/celebrity-rings-03.webp" alt=""></div><span class="ds-cap">Celebrity md</span></div>
+      <div class="ds-cell"><div class="sf-card sf-card--md"><img src="../assets/cards/pass.webp" alt=""></div><span class="ds-cap">Pass card md</span></div>
+      <div class="ds-cell"><div class="sf-card sf-card--sm sf-card--back"><img src="../assets/cards/back-achievement.webp" alt=""></div><span class="ds-cap">Back</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stage overlays: prompt banner, toasts, tooltip, floating gains</h2>
+    <div class="ds-stage">
+      <div class="sf-banner"><span class="sf-banner__step">Crew 2 of 3</span><span class="sf-banner__text">Move 1 Crew x3 &middot; Pick the next Crew, or <b>Done</b></span><button class="sf-btn sf-btn--go">Done</button><button class="sf-btn sf-btn--ghost">Cancel</button></div>
+      <span class="sf-float sf-float--still sf-pc--blue" style="left:30px;bottom:24px"><img src="../assets/icons/coffee.webp" alt="">+1 coffee &middot; Usher</span>
+      <span class="sf-float sf-float--still sf-pc--yellow" style="left:240px;bottom:24px"><img src="../assets/icons/vp.webp" alt="">+20 VP</span>
+    </div>
+    <div class="ds-row" style="margin-top:14px">
+      <div class="ds-stage" style="flex:1;min-width:320px;height:96px"><div class="sf-toast sf-toast--refuse" style="animation:none"><img src="../assets/icons/cross.webp" alt=""><span>Main Stage has no Celebrity.<small>Take a Selfie needs one of your Crew in a hall with a Celebrity figure.</small></span></div></div>
+      <div class="ds-stage" style="flex:1;min-width:320px;height:96px"><div class="sf-toast sf-toast--info" style="animation:none"><img src="../assets/icons/selfie-orange.webp" alt=""><span>Medium Bot bought Excuse Me! for 1 orange Selfie.</span></div></div>
+      <div style="position:relative;width:280px;height:120px"><div class="sf-tip" style="left:0;top:0"><b>Vendor Hall</b>2 of 8 in the queue. Security: none. Photographer: Sam.<div class="sf-tip__who">Your N00b can reach it: 2 halls, 1 coffee.</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Modal, log, hotseat handover</h2>
+    <div class="ds-row">
+      <div class="sf-modal" style="animation:none;width:420px">
+        <h3 class="sf-modal__title">Pass: choose an Achievement</h3>
+        <p style="margin:0 0 10px;color:var(--ink-soft)">Score one now, or bin it for 2 coffee. You draw a replacement.</p>
+        <div class="ds-row">
+          <div class="ds-cell"><div class="sf-card sf-card--md is-legal"><img src="../assets/cards/achievement-01.webp" alt=""></div><button class="sf-btn sf-btn--primary">Score 15 VP</button><span class="ds-cap">3 VIP or AAA &times; 5</span></div>
+          <div class="ds-cell"><div class="sf-card sf-card--md"><img src="../assets/cards/achievement-17.webp" alt=""></div><button class="sf-btn">Bin for 2 coffee</button></div>
+        </div>
+      </div>
+      <div class="sf-panel" style="width:340px">
+        <h3 class="sf-panel__title">Log</h3>
+        <div class="sf-log">
+          <div class="sf-log__hour">Hour 2 &middot; On the Floor</div>
+          <div class="sf-log__item sf-pc--yellow"><span><b>Sam</b> moved a VIP Main Hall &rarr; Food Trucks (1 coffee).</span></div>
+          <div class="sf-log__item sf-pc--pink"><span><b>Medium Bot</b> passed first: +2 coffee, scored Media for 10 VP.</span></div>
+          <div class="sf-log__item sf-pc--green"><span><b>Easy Bot</b> placed a Security Volunteer in Main Hall (2 coffee).</span></div>
+          <div class="sf-log__item sf-pc--blue"><span><b>Dean</b> took a green Selfie in Cosplay Corner (1 coffee).</span></div>
+        </div>
+      </div>
+      <div class="ds-mini-handover" style="width:440px">
+        <div class="sf-handover sf-pc--yellow"><div class="sf-handover__card">
+          <span class="ds-cap" style="color:#fff">Pass the device to</span>
+          <h2 class="sf-handover__title" style="font-size:48px">Sam</h2>
+          <button class="sf-btn sf-btn--go sf-btn--big">I'm Sam - show my hand</button>
+        </div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import { A, HALL, PLAYERS, crew, dial, selfies, lanyard, hall, actionsPanel, nowPanel, passPanel, exchangePanel, marketPanel } from './mock-render.js';
+  const $ = (id) => document.getElementById(id);
+
+  const sw = [
+    ['--carpet', 'Carpet (page)'], ['--paper', 'Clay paper'], ['--paper-3', 'Paper 3'], ['--floor', 'Board floor'], ['--queue-bed', 'Queue bed'],
+    ['--ink', 'Ink'], ['--zone-act', 'Zone: act'], ['--zone-star', 'Zone: celebrity'], ['--zone-swag', 'Zone: swag'], ['--zone-goal', 'Zone: goals / VP'],
+    ['--zone-pass', 'Zone: pass'], ['--hi', 'Highlight (lime)'], ['--bad', 'Refusal'], ['--coffee', 'Coffee'], ['--rope', 'Velvet rope'], ['--brass', 'Brass'],
+    ['--celeb-green', 'Celebrity green'], ['--celeb-red', 'Celebrity red'], ['--celeb-orange', 'Celebrity orange'],
+    ['--p-blue', 'Player blue'], ['--p-yellow', 'Player yellow'], ['--p-pink', 'Player pink'], ['--p-green', 'Player green'], ['--p-red', 'Player red'],
+  ];
+  $('swatches').innerHTML = sw.map(([v, l]) => `<div class="ds-sw"><span style="background:var(${v})"></span><div>${l}<br><code>${v}</code></div></div>`).join('');
+
+  $('lanyards').innerHTML = `<div style="width:350px">${lanyard(PLAYERS[0], { active: true })}</div>
+    <div style="width:350px;display:grid;gap:12px">${lanyard(PLAYERS[1], {})}${lanyard(PLAYERS[2], { passed: true })}</div>`;
+
+  $('pieces').innerHTML = `
+    <div class="ds-cell">${dial(0)}<span class="ds-cap">Dial 0</span></div>
+    <div class="ds-cell">${dial(7)}<span class="ds-cap">Dial 7</span></div>
+    <div class="ds-cell">${dial(12)}<span class="ds-cap">Dial 12 (cap)</span></div>
+    <div class="ds-cell">${selfies({ green: 2, red: 0, orange: 5 })}<span class="ds-cap">Selfies</span></div>
+    <div class="ds-cell"><div class="ds-row">${crew('blue', 'n', 'sf-crew--px')}${crew('blue', 'v', 'sf-crew--px')}${crew('blue', 'a', 'sf-crew--px')}</div><span class="ds-cap">Crew N00b / VIP / AAA</span></div>
+    <div class="ds-cell"><div class="ds-row" style="align-items:center"><span class="sf-pass-marker sf-pc--pink"></span><span class="sf-score-marker sf-pc--pink"></span><span class="sf-first-player"></span></div><span class="ds-cap">Pass disc / score cube / First Player</span></div>
+    <div class="ds-cell"><span class="sf-hour-marker"><span><small>HOUR</small>3</span></span><span class="ds-cap">Hour marker</span></div>
+    <div class="ds-cell"><div class="ds-row">${['green', 'red', 'orange'].map(c => `<img class="sf-medallion sf-cc--${c}" src="${A}portraits/celebrity-${c === 'green' ? 'who-03' : c === 'red' ? 'marvel-02' : 'star-wars-02'}.webp" alt="">`).join('')}</div><span class="ds-cap">Celebrity medallions</span></div>`;
+
+  // three halls showing the states (re-using the fixture halls)
+  const states = [
+    ['h22', { state: 'legal', tag: '1 hall' }],
+    ['h33', { state: 'illegal', tag: 'FULL 8/8' }],
+    ['h31', { state: 'dimmed' }],
+    ['h23', { state: 'selected' }],
+    ['h32', { state: 'source' }],
+    ['h13', {}],
+  ];
+  $('halls').innerHTML = states.map(([id, st]) => hall(HALL[id], { hallState: { [id]: st } }).replace(/style="grid-area:[^"]*"/, '')).join('');
+
+  $('panels').innerHTML = nowPanel('who-03', 'green', 2) + actionsPanel({ armed: 'move2', coffee: 4 }) + passPanel({ 1: ['pink'], 3: ['blue', 'yellow'] }) + exchangePanel() + marketPanel();
+</script>
+</body>
+</html>

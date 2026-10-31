@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Superfans mock-up - Landing and setup</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<!-- Static design mock-up (T7). Landing page = sell sheet with the setup panel in it. -->
+<div class="sf-landing">
+
+  <header class="sf-hero">
+    <div class="sf-motes" aria-hidden="true">
+      <i style="--x:6%;--y:18%;--c:#f4c51a;--s:12px;--t:8s"></i>
+      <i style="--x:92%;--y:12%;--c:#df4fc6;--s:9px;--t:10s;--d:-2s"></i>
+      <i style="--x:14%;--y:62%;--c:#4c7cf3;--s:8px;--t:7s;--d:-4s"></i>
+      <i style="--x:88%;--y:55%;--c:#2fa84f;--s:13px;--t:11s"></i>
+      <i style="--x:50%;--y:4%;--c:#f28a1b;--s:7px;--t:9s;--d:-1s"></i>
+    </div>
+    <img class="sf-hero__art" src="../assets/ui/logo-title.webp" alt="Superfans - three excited clay fans at a comic convention" width="1400" height="684">
+    <h1 class="sf-hero__hook">Run the con. Queue for celebrities, snap the selfies, grab the swag.</h1>
+    <p class="sf-hero__sub">Move your Crew between nine halls, jostle for Prime Position and be there when the stars walk in. Five Hours. One winning fan club.</p>
+    <div class="sf-statstrip">
+      <span class="sf-statstrip__item"><img src="../assets/tokens/crew-blue.webp" alt=""><span><small>Players</small>2-5</span></span>
+      <span class="sf-statstrip__item"><img src="../assets/icons/hour-stopwatch.webp" alt=""><span><small>Play time</small>45-75 min</span></span>
+      <span class="sf-statstrip__item"><img src="../assets/icons/trophy.webp" alt=""><span><small>Ages</small>12+</span></span>
+      <span class="sf-statstrip__item"><img src="../assets/icons/coffee.webp" alt=""><span><small>Bots</small>Easy, Medium, Hard</span></span>
+    </div>
+  </header>
+
+  <section class="sf-panel sf-setup sf-panel--act" aria-labelledby="setup-title">
+    <h2 class="sf-panel__title" id="setup-title" style="font-size:var(--fs-xl)">Who's coming to the con? <small>2 to 5 players</small></h2>
+    <div class="sf-setup__grid">
+
+      <div class="sf-seat sf-pc--blue">
+        <span class="sf-seat__swatch"><img src="../assets/tokens/crew-blue.webp" alt=""></span>
+        <input class="sf-input" value="Dean" aria-label="Player 1 name">
+        <div class="sf-colours" role="radiogroup" aria-label="Colour">
+          <button class="sf-colour sf-pc--blue is-selected" title="Blue"></button>
+          <button class="sf-colour sf-pc--yellow" disabled title="Yellow - taken by Sam"></button>
+          <button class="sf-colour sf-pc--pink" disabled title="Pink - taken by seat 3"></button>
+          <button class="sf-colour sf-pc--green" disabled title="Green - taken by seat 4"></button>
+          <button class="sf-colour sf-pc--red" title="Red"></button>
+        </div>
+        <div class="sf-seg" role="radiogroup" aria-label="Seat type">
+          <button class="is-selected">Human</button><button>Easy</button><button>Medium</button><button>Hard</button>
+        </div>
+        <button class="sf-btn sf-btn--icon sf-btn--ghost" title="Remove seat" disabled>&times;</button>
+      </div>
+
+      <div class="sf-seat sf-pc--yellow">
+        <span class="sf-seat__swatch"><img src="../assets/tokens/crew-yellow.webp" alt=""></span>
+        <input class="sf-input" value="Sam" aria-label="Player 2 name">
+        <div class="sf-colours">
+          <button class="sf-colour sf-pc--blue" disabled title="Blue - taken by Dean"></button>
+          <button class="sf-colour sf-pc--yellow is-selected" title="Yellow"></button>
+          <button class="sf-colour sf-pc--pink" disabled></button>
+          <button class="sf-colour sf-pc--green" disabled></button>
+          <button class="sf-colour sf-pc--red" title="Red"></button>
+        </div>
+        <div class="sf-seg"><button class="is-selected">Human</button><button>Easy</button><button>Medium</button><button>Hard</button></div>
+        <button class="sf-btn sf-btn--icon sf-btn--ghost" title="Remove seat" disabled>&times;</button>
+      </div>
+
+      <div class="sf-seat sf-pc--pink">
+        <span class="sf-seat__swatch"><img src="../assets/tokens/crew-pink.webp" alt=""></span>
+        <input class="sf-input" value="Medium Bot" aria-label="Player 3 name">
+        <div class="sf-colours">
+          <button class="sf-colour sf-pc--blue" disabled></button>
+          <button class="sf-colour sf-pc--yellow" disabled></button>
+          <button class="sf-colour sf-pc--pink is-selected" title="Pink"></button>
+          <button class="sf-colour sf-pc--green" disabled></button>
+          <button class="sf-colour sf-pc--red" title="Red"></button>
+        </div>
+        <div class="sf-seg"><button>Human</button><button>Easy</button><button class="is-selected">Medium</button><button>Hard</button></div>
+        <button class="sf-btn sf-btn--icon sf-btn--ghost" title="Remove seat">&times;</button>
+      </div>
+
+      <div class="sf-seat sf-pc--green">
+        <span class="sf-seat__swatch"><img src="../assets/tokens/crew-green.webp" alt=""></span>
+        <input class="sf-input" value="Easy Bot" aria-label="Player 4 name">
+        <div class="sf-colours">
+          <button class="sf-colour sf-pc--blue" disabled></button>
+          <button class="sf-colour sf-pc--yellow" disabled></button>
+          <button class="sf-colour sf-pc--pink" disabled></button>
+          <button class="sf-colour sf-pc--green is-selected" title="Green"></button>
+          <button class="sf-colour sf-pc--red" title="Red"></button>
+        </div>
+        <div class="sf-seg"><button>Human</button><button class="is-selected">Easy</button><button>Medium</button><button>Hard</button></div>
+        <button class="sf-btn sf-btn--icon sf-btn--ghost" title="Remove seat">&times;</button>
+      </div>
+    </div>
+
+    <details class="sf-details">
+      <summary>Game options (rule variants)</summary>
+      <p style="margin:8px 0 0;color:var(--ink-soft);font-size:14px">Listed from the engine's VARIANTS table once the rulings are in: label, choices, default, one-line description each.</p>
+    </details>
+
+    <div class="sf-setup__foot">
+      <button class="sf-btn">+ Add a player</button>
+      <span class="sf-setup__hint">Set every seat to a bot to watch a demo game.</span>
+      <button class="sf-btn sf-btn--go sf-btn--big">Open the doors!</button>
+    </div>
+  </section>
+
+  <section class="sf-section">
+    <h2 class="sf-section__title">How an Hour works</h2>
+    <div class="sf-steps">
+      <div class="sf-step"><img src="../assets/icons/coffee.webp" alt=""><h3>1. Coffee Break</h3><p>Everyone tops up coffee, the fuel for every action.</p></div>
+      <div class="sf-step"><img src="../assets/icons/footprints.webp" alt=""><h3>2. On the Floor</h3><p>Take turns: move Crew, upgrade badges, volunteer, take selfies, buy swag. Pass early for rewards.</p></div>
+      <div class="sf-step"><img src="../assets/icons/star.webp" alt=""><h3>3. Celebrity Walk</h3><p>The star of the Hour walks the floor, hands out selfies and scores the queue where they stop.</p></div>
+    </div>
+  </section>
+
+  <section class="sf-section">
+    <h2 class="sf-section__title">Every action, one coffee price</h2>
+    <div class="sf-actiongrid">
+      <div class="sf-action" style="cursor:default"><img class="sf-action__icon" src="../assets/icons/footprints.webp" alt=""><span class="sf-action__label">Move 2</span><span class="sf-action__sub">One Crew up to 2 halls</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">1</span></div>
+      <div class="sf-action" style="cursor:default"><img class="sf-action__icon" src="../assets/icons/move-arrows.webp" alt=""><span class="sf-action__label">Move 1 Crew x3</span><span class="sf-action__sub">Three Crew, 1 hall each</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">3</span></div>
+      <div class="sf-action" style="cursor:default"><img class="sf-action__icon" src="../assets/icons/badge-noob.webp" alt=""><span class="sf-action__label">New N00b</span><span class="sf-action__sub">Join the Entrance queue</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">4</span></div>
+      <div class="sf-action" style="cursor:default"><img class="sf-action__icon" src="../assets/overlays/vip-hat.webp" alt=""><span class="sf-action__label">Upgrade</span><span class="sf-action__sub">N00b to VIP to AAA</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">5</span></div>
+      <div class="sf-action" style="cursor:default"><img class="sf-action__icon" src="../assets/icons/volunteer.webp" alt=""><span class="sf-action__label">Volunteer</span><span class="sf-action__sub">Usher, Security or Photographer</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">2</span></div>
+      <div class="sf-action" style="cursor:default"><img class="sf-action__icon" src="../assets/icons/photographer.webp" alt=""><span class="sf-action__label">Take a Selfie</span><span class="sf-action__sub">With a celebrity in your hall</span><span class="sf-cost"><img src="../assets/icons/coffee.webp" alt="">1</span></div>
+    </div>
+  </section>
+
+  <section class="sf-section">
+    <h2 class="sf-section__title">On the con floor</h2>
+    <div class="sf-gallery">
+      <figure><img src="../assets/scenes/selfie-stick-squad.webp" alt="Three clay fans with a selfie stick"><figcaption>Nine fan clubs, each with its own power</figcaption></figure>
+      <figure><img src="../assets/scenes/card-traders.webp" alt="Clay card traders at long tables"><figcaption>Swag that bends the rules</figcaption></figure>
+      <figure><img src="../assets/scenes/follywood.webp" alt="FOLLYWOOD clay hill sign"><figcaption>Eighteen celebrity guests, five Hours</figcaption></figure>
+    </div>
+  </section>
+
+  <footer class="sf-footer">
+    Superfans, a board game by Dean Morris &middot; Wombat Game Factory &middot; <a href="#">Rule book (PDF)</a> &middot; <a href="#">Report a bug</a>
+  </footer>
+</div>
+</body>
+</html>

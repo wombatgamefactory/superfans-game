@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Superfans mock-ups</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../style.css">
+<style>
+  /* gallery chrome only - not part of the design system */
+  .mk-nav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255, 250, 241, .92); backdrop-filter: blur(6px);
+    box-shadow: 0 2px 0 rgba(110,70,30,.12);
+  }
+  .mk-nav img { height: 36px; border-radius: 8px; }
+  .mk-nav h1 { font-size: 22px; margin-right: 12px; }
+  .mk-nav a { padding: 6px 12px; border-radius: 999px; background: var(--paper-3); color: var(--ink); text-decoration: none; font-weight: 800; font-size: 14px; }
+  .mk-nav a:hover { background: var(--hi); }
+  .mk-sec { padding: 18px 16px 0; }
+  .mk-sec h2 { font-size: 26px; margin-bottom: 4px; }
+  .mk-sec p { margin: 0 0 10px; color: var(--ink-soft); font-size: 14px; max-width: 980px; }
+  .mk-frame { display: block; width: 100%; height: calc(100vh - 140px); min-height: 560px; border: 0; border-radius: 16px; box-shadow: var(--clay-lift); background: var(--carpet); }
+  .mk-frame--tall { height: 1400px; }
+  .mk-devices { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .mk-device { display: grid; gap: 6px; }
+  .mk-device b { font-size: 13px; }
+  .mk-scale { position: relative; overflow: hidden; border-radius: 12px; box-shadow: var(--clay-lift); background: var(--carpet); }
+  .mk-scale iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<nav class="mk-nav">
+  <img src="../assets/ui/logo-wordmark.webp" alt="Superfans">
+  <h1>Mock-ups</h1>
+  <a href="#play">Play screen</a>
+  <a href="#devices">Desktop / tablet</a>
+  <a href="#walk">Celebrity walk</a>
+  <a href="#scoring">Scoring popup</a>
+  <a href="#end">End screen</a>
+  <a href="#landing">Landing and setup</a>
+  <a href="#components">Components</a>
+</nav>
+
+<section class="mk-sec" id="play">
+  <h2>Main play screen - On the Floor</h2>
+  <p>Hour 2, Dean's turn, Move 2 armed with his N00b in the Entrance selected: reachable halls lit (lime, with "1 hall" / "2 halls" tags), Food Trucks full and illegal-but-clickable (its refusal shown as a toast), out-of-range halls dimmed. Frames below render at this window's width, so the layout responds as the real game will. Each screen is also its own page (play.html, walk.html ...).</p>
+  <iframe class="mk-frame" src="play.html" title="Play screen"></iframe>
+</section>
+
+<section class="mk-sec" id="devices">
+  <h2>Same screen at fixed device sizes</h2>
+  <p>Desktop 1920 x 1080 (three columns: lanyards, board, side), tablet 1280 x 800 and 1024 x 768 (board-first: player strip on top, board left, side panel scrolls). Scaled to fit.</p>
+  <div class="mk-devices">
+    <div class="mk-device"><b>1920 x 1080</b><div class="mk-scale" data-w="1920" data-h="1080" data-show="560"><iframe src="play.html" title="Play 1920" width="1920" height="1080"></iframe></div></div>
+    <div class="mk-device"><b>1280 x 800</b><div class="mk-scale" data-w="1280" data-h="800" data-show="480"><iframe src="play.html" title="Play 1280" width="1280" height="800"></iframe></div></div>
+    <div class="mk-device"><b>1024 x 768</b><div class="mk-scale" data-w="1024" data-h="768" data-show="400"><iframe src="play.html" title="Play 1024" width="1024" height="768"></iframe></div></div>
+  </div>
+</section>
+
+<section class="mk-sec" id="walk">
+  <h2>Celebrity walk moment</h2>
+  <p>All players have passed. Tom Cake (green figure) has just entered Vendor Hall: route drawn in the celebrity colour (walked part faded), camera-flash on the hall, floating selfie gains for Prime Position and the Photographer, walk feed in the side panel, speed and skip controls.</p>
+  <iframe class="mk-frame" src="walk.html" title="Celebrity walk"></iframe>
+</section>
+
+<section class="mk-sec" id="scoring">
+  <h2>Scoring popup</h2>
+  <p>Destination reached: selfies first, then one arithmetic line per Crew in queue order, per-player totals with the sums shown, confetti behind.</p>
+  <iframe class="mk-frame" src="scoring.html" title="Scoring popup"></iframe>
+</section>
+
+<section class="mk-sec" id="end">
+  <h2>End screen with stats</h2>
+  <p>Winner line, podium, ranked table with seat badges, VP by source with arithmetic and a stacked bar, the tie-break rule printed, game stats, Play again / Download game record.</p>
+  <iframe class="mk-frame mk-frame--tall" src="end.html" title="End screen"></iframe>
+</section>
+
+<section class="mk-sec" id="landing">
+  <h2>Landing and setup</h2>
+  <p>Sell-sheet landing: hero art with the clay title, hook, stat strip, seat setup (colour pickers with de-duplication, Human / Easy / Medium / Hard), then how an Hour works, actions and scenes.</p>
+  <iframe class="mk-frame mk-frame--tall" src="landing.html" title="Landing and setup"></iframe>
+</section>
+
+<section class="mk-sec" id="components" style="padding-bottom:40px">
+  <h2>Components</h2>
+  <p>The design system sheet: palette, type, buttons, lanyards, dial, pieces, markers, hall states, panels, cards, overlays, modal, log, handover.</p>
+  <iframe class="mk-frame mk-frame--tall" src="components.html" title="Components" style="height:2600px"></iframe>
+</section>
+
+<script>
+  // scale the fixed-size device frames to their display width
+  function fit() {
+    for (const box of document.querySelectorAll('.mk-scale')) {
+      const w = +box.dataset.w, h = +box.dataset.h;
+      const show = Math.min(+box.dataset.show, window.innerWidth - 32);
+      const s = show / w;
+      box.style.width = show + 'px';
+      box.style.height = Math.round(h * s) + 'px';
+      box.querySelector('iframe').style.transform = `scale(${s})`;
+    }
+  }
+  fit();
+  window.addEventListener('resize', fit);
+</script>
+</body>
+</html>
