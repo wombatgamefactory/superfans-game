@@ -47,6 +47,8 @@ import { eventsToLog } from './log.js';
 import { playWalk, patchDisplay } from './walk.js';
 import { renderEnd } from './end-screen.js';
 import { showSetup, defaultSeats } from './setup.js';
+import { buildRecord as buildGameRecord, recordFileName } from './record.js'; // T16
+import { installRealPlayerTools } from './real-player.js'; // T16
 
 // ---- hooks (T16) -------------------------------------------------------------------------
 
@@ -482,18 +484,9 @@ async function finishGame() {
   fire('onRender');
 }
 
+/** The game record (T16: record.js; replayable by tools/replay.mjs). */
 function buildRecord() {
-  const cfg = getGameConfig(app.state);
-  return {
-    game: 'superfans',
-    version: CONFIG.VERSION,
-    rulesId: RULES_ID,
-    seed: app.seed,
-    config: cfg,
-    seats: app.seats.map((s) => ({ kind: s.kind, level: s.level, name: s.name, colour: s.colour })),
-    actions: app.actions.map((a) => ({ seat: a.seat, hour: a.hour, how: a.how, action: a.action })),
-    finalScores: scoreGame(app.state).players.map((p) => ({ seat: p.seat, name: p.name, vp: p.vp, rank: p.rank })),
-  };
+  return buildGameRecord({ state: app.state, seats: app.seats, actions: app.actions, events: app.events, version: CONFIG.VERSION, durationMs: app.startedAt ? performance.now() - app.startedAt : null });
 }
 
 // ---- undo ---------------------------------------------------------------------------------------------------------
@@ -809,11 +802,12 @@ async function gainOk(ctx) {
 }
 
 function downloadRecord() {
-  const blob = new Blob([JSON.stringify(buildRecord(), null, 1)], { type: 'application/json' });
+  const rec = buildRecord();
+  const blob = new Blob([JSON.stringify(rec, null, 1)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `superfans-game-${app.seed}.json`;
+  a.download = recordFileName(rec);
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -946,6 +940,15 @@ async function boot() {
   document.addEventListener('mouseover', onHover);
   window.addEventListener('resize', () => { if (app.screen === 'game') { app.regions['sf-stage'] = null; } });
   exposeTestApi();
+  // T16: analytics, stats, history and the bug reporter hang off the hooks
+  window.__sfBug = installRealPlayerTools({
+    registerHooks,
+    getContext: () => ({
+      state: app.state, seats: app.seats, actions: app.actions, screen: app.screen, seed: app.seed, incidents: app.incidents.slice(-20),
+      fallbackCount: app.fallbackCount, humanActions: app.humanActions, speed: view.speed, generic: view.generic,
+      modal: view.modal ? view.modal.kind : null, undoDepth: app.undo.length,
+    }),
+  });
   const seatParam = params.get('seats');
   const seedParam = params.get('seed');
   const setup = { seats: seatParam ? seatsFromParam(seatParam) : null, seed: seedParam !== null ? Number(seedParam) : null };

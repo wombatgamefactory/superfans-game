@@ -23,7 +23,7 @@ try {
     await page.waitForSelector('.sf-end', { timeout: 150000 });
     const title = await page.locator('.sf-end__title').innerText();
     assert.ok(/wins/.test(title), `demo game names a winner: ${title}`);
-    assert.equal(await page.locator('.sf-table tbody tr').count(), 3);
+    assert.equal(await page.locator('[data-end-panel="scores"] .sf-table tbody tr').count(), 3);
     const incidents = await page.evaluate(() => window.__sf.incidents);
     assert.deepEqual(incidents, [], 'no bot failures in the demo game');
     assert.deepEqual(errors, [], 'no console errors in the demo game');

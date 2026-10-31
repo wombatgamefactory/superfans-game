@@ -5,6 +5,7 @@
 // Markup follows design/landing.html (seat rows, colour dots, segmented control).
 
 import { art, escapeHtml, crewArt, ICON } from './art.js';
+import { historyHtml } from './history.js'; // T16
 
 export const COLOUR_IDS = ['blue', 'yellow', 'pink', 'green', 'red'];
 const COLOUR_LABEL = { blue: 'Blue', yellow: 'Yellow', pink: 'Pink', green: 'Green', red: 'Red' };
@@ -83,6 +84,7 @@ export function showSetup(root, options) {
           <button class="sf-btn sf-btn--go sf-btn--big" data-start>Open the doors!</button>
         </div>
       </section>
+      ${historyHtml()}
     </div>`;
   }
 

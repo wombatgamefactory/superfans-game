@@ -72,7 +72,7 @@ try {
   // --- the end screen ----------------------------------------------------------------------------------
   const title = await page.locator('.sf-end__title').innerText();
   assert.ok(/wins/.test(title), `a winner is named: ${title}`);
-  const rows = await page.locator('.sf-table tbody tr').count();
+  const rows = await page.locator('[data-end-panel="scores"] .sf-table tbody tr').count();
   assert.equal(rows, 2, 'one row per player');
   const html = await page.locator('.sf-end').innerHTML();
   assert.ok(!/undefined|NaN/.test(html), 'the end screen never prints undefined or NaN');

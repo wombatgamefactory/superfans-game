@@ -8,6 +8,8 @@
 import { scoreGame, hallName, achievementCard, clubCard, EVENTS, getConstants } from '../engine/index.js';
 import { art, escapeHtml, crewPiece, ICON, SELFIE_COLOURS } from './art.js';
 import { confettiHtml } from './modals.js';
+import { collectStats } from './stats.js';
+import { renderStats } from './stats-view.js';
 
 const GROUPS = [
   { id: 'celeb', label: 'Celebrities', sources: ['celebrity'] },
@@ -184,6 +186,12 @@ export function renderEnd(state, seats, events, extra = {}) {
   const tiles = statTiles(state, events, seats)
     .map((t) => `<div class="sf-panel sf-stat">${art(t.icon, { alt: '' })}<span class="sf-stat__value">${escapeHtml(t.value)}</span><span class="sf-stat__label">${escapeHtml(t.label)}</span></div>`)
     .join('');
+  let statsBody = '<p class="sf-stats__none">No stats are available for this game.</p>';
+  try {
+    statsBody = renderStats(collectStats(events, state.players, seats), sc.players);
+  } catch {
+    // the Stats tab must never take the results screen down with it
+  }
   const legend = GROUPS.map((g) => `<span style="--sw:${SWATCH[g.id]}">${g.label}</span>`).join('');
   return `<div class="sf-endpage">${confettiHtml(70)}
   <main class="sf-end" style="position:relative;z-index:1">
@@ -201,6 +209,12 @@ export function renderEnd(state, seats, events, extra = {}) {
       </div>
       <div class="sf-podium" aria-label="Podium">${pod}</div>
     </div>
+    <div class="sf-tabs" role="tablist" aria-label="Results">
+      <button class="sf-tab is-selected" role="tab" aria-selected="true" data-end-tab="scores" type="button">Scores</button>
+      <button class="sf-tab" role="tab" aria-selected="false" data-end-tab="stats" type="button">Stats</button>
+    </div>
+    <div class="sf-tabpanel" data-end-panel="stats" role="tabpanel" hidden>${statsBody}</div>
+    <div data-end-panel="scores" class="sf-tabpanel" role="tabpanel">
     <section aria-label="Scores">
       <div class="sf-table-wrap">
         <table class="sf-table">
@@ -214,6 +228,7 @@ export function renderEnd(state, seats, events, extra = {}) {
       </div>
     </section>
     ${tiles ? `<section><h2 style="font-size:var(--fs-xl);margin-bottom:12px">Game stats</h2><div class="sf-stats">${tiles}</div></section>` : ''}
+    </div>
     <div id="sf-end-extra"></div>
   </main></div>`;
 }
