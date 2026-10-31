@@ -39,9 +39,9 @@ try {
   await page.click('.sf-hour[data-route-toggle] >> nth=3');
   ok((await hours()).some((h) => h > nowHour + 1), `a top-bar Hour shows a later Hour's route (${await hours()})`);
 
-  await page.click('.sf-panel--star .sf-route-btn >> nth=0');
+  await page.click('.sf-now-slide.is-viewed .sf-route-btn >> nth=0');
   ok(!(await hours()).includes(nowHour), "the panel's Hide route hides this Hour's route");
-  await page.click('.sf-panel--star .sf-route-btn >> nth=0');
+  await page.click('.sf-now-slide.is-viewed .sf-route-btn >> nth=0');
   ok((await hours()).includes(nowHour), 'and Show route brings it back');
 
   await page.focus(fig);
@@ -67,6 +67,44 @@ try {
   }
   assert.deepEqual(errors, [], errors.join(' | '));
   await page.close();
+
+  // ---- the celebrity panel slides between Hours, and the board follows it ----
+  {
+    const { page, errors } = await openPage(browser, server, 'seats=h,m&seed=5&speed=fast', { width: 1600, height: 1000 });
+    await page.waitForFunction(() => window.__sf.screen === 'game' && window.__sf.state && window.__sf.state.phase === 'floor' && window.__sf.seats[window.__sf.state.toAct].kind === 'human' && !window.__sf.busy, null, { timeout: 60000 });
+    const routeHours = () => page.evaluate(() => [...document.querySelectorAll('.sf-board__overlay .sf-route__hour')].map((t) => Number(t.textContent)).sort());
+    const count = () => page.textContent('.sf-now-nav__count');
+    const viewedSlide = () => page.evaluate(() => Number(document.querySelector('.sf-now-slide.is-viewed').dataset.nowSlide));
+    ok((await count()).trim() === '1 / 5' && (await viewedSlide()) === 1, `opens on Hour 1 (${await count()})`);
+    ok(JSON.stringify(await routeHours()) === '[1]', 'the board shows Hour 1');
+    ok((await page.locator('.sf-now-slide:not(.is-viewed)[inert]').count()) === 4, 'the four other slides are inert (not focusable)');
+
+    await page.click('[data-slide-role="next"]');
+    ok((await count()).trim() === '2 / 5' && (await viewedSlide()) === 2, 'the next arrow moves to Hour 2');
+    ok(JSON.stringify(await routeHours()) === '[2]', `sliding shows that Hour's route and hides this Hour's (${await routeHours()})`);
+    ok(/Next Hour/.test(await page.textContent('[data-carousel-root] .sf-panel__title')), 'the title says Next Hour');
+
+    await page.focus('[data-slide-role="viewport"]');
+    await page.keyboard.press('ArrowRight');
+    ok((await count()).trim() === '3 / 5' && JSON.stringify(await routeHours()) === '[3]', 'the right arrow key moves to Hour 3');
+
+    await page.click('[data-slide-role="dot-5"]');
+    ok((await count()).trim() === '5 / 5', 'a dot jumps to Hour 5');
+    ok((await routeHours()).every((h) => h === 5) && (await routeHours()).length === 2, `Hour 5 shows both of its celebrities' routes (${await routeHours()})`);
+    ok(await page.isDisabled('[data-slide-role="next"]'), 'the next arrow is disabled on Hour 5');
+
+    const box = await page.locator('[data-carousel]').boundingBox();
+    await page.mouse.move(box.x + box.width * 0.3, box.y + 40);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.75, box.y + 45, { steps: 6 });
+    await page.mouse.up();
+    ok((await count()).trim() === '4 / 5', `a swipe to the right goes back an Hour (${await count()})`);
+
+    await page.click('[data-slide-role="back"]');
+    ok((await count()).trim() === '1 / 5' && JSON.stringify(await routeHours()) === '[1]', 'Back to Hour 1 returns, and the board shows Hour 1 again');
+    assert.deepEqual(errors, [], errors.join(' | '));
+    await page.close();
+  }
 } finally {
   await browser.close();
   await server.close();

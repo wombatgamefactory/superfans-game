@@ -45,6 +45,8 @@ const view = {
   /** Celebrity routes the player switched on or off by clicking (card ids), on top of the default:
    *  this Hour's celebrities are shown during the Coffee Break and the Floor. */
   routes: { on: new Set(), off: new Set() },
+  /** The Hour the celebrity panel was slid to: { hour, forHour } (ignored once the Hour changes), or null. */
+  nowSlide: null,
 };
 
 let counter = 0;
@@ -151,6 +153,7 @@ export function resetForNewGame() {
   view.floats = [];
   view.logOpen = false;
   view.routes = { on: new Set(), off: new Set() };
+  view.nowSlide = null;
   clearFlash();
 }
 

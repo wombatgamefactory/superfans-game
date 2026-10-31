@@ -183,6 +183,7 @@ function buildCtx() {
     tags: new Map(),
     routes: [],
     routeShown: (card) => routeShown(state, card),
+    nowHour: viewedHour(state),
   };
   // tags on halls while a hall is being picked
   if (active) {
@@ -220,10 +221,95 @@ function capacityHalls(state) {
 
 // ---- celebrity routes: shown by default for this Hour, switched on or off by clicking a celebrity ----
 
-/** The routes drawn without any clicks: this Hour's celebrities on the board, during the Coffee Break and the Floor. */
+/** The Hour the celebrity panel is showing: the one the player slid to, or the current Hour. A new Hour resets it. */
+function viewedHour(state) {
+  const v = view.nowSlide;
+  return v && v.forHour === state.hour ? v.hour : Math.min(state.hour, 5);
+}
+
+/**
+ * The routes drawn without any clicks: the celebrities of the Hour shown in the
+ * celebrity panel. Before anyone slides, that is this Hour, during the Coffee
+ * Break and the Floor; once the player slides, whichever Hour they are looking at.
+ */
 function defaultRouteCards(state) {
-  if (state.phase !== 'floor' && state.phase !== 'coffeeBreak') return [];
-  return slotsOfHour(state, state.hour).filter((e) => e.status === 'onBoard').map((e) => e.card);
+  const slid = view.nowSlide && view.nowSlide.forHour === state.hour;
+  if (!slid && state.phase !== 'floor' && state.phase !== 'coffeeBreak') return [];
+  const h = viewedHour(state);
+  return state.schedule.filter((e) => e.hour === h && e.status !== 'done').map((e) => e.card);
+}
+
+/** Moves the celebrity panel to Hour `hour` (1-5), with a slide animation, and shows that Hour's route. */
+function slideNow(hour) {
+  const state = app.state;
+  if (!state) return;
+  const to = Math.max(1, Math.min(5, hour));
+  const from = viewedHour(state);
+  if (to === from) return;
+  const focusRole = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.slideRole : null;
+  view.nowSlide = { hour: to, forHour: state.hour };
+  // sliding to an Hour shows its route, even if it was hidden earlier
+  for (const e of state.schedule) if (e.hour === to) view.routes.off.delete(e.card);
+  const oldViewport = document.querySelector('[data-carousel]');
+  const oldHeight = oldViewport ? oldViewport.offsetHeight : 0;
+  render();
+  const viewport = document.querySelector('[data-carousel]');
+  if (viewport && oldHeight && !reducedMotion()) {
+    // the frame grows or shrinks to the new slide from its old height
+    viewport.style.height = `${oldHeight}px`;
+    void viewport.offsetHeight;
+    fitCarousel();
+  }
+  const track = document.querySelector('[data-now-track]');
+  if (track && !reducedMotion()) {
+    track.style.transition = 'none';
+    track.style.transform = `translateX(${-(from - 1) * 100}%)`;
+    void track.offsetWidth; // start the slide from where it was
+    track.style.transition = '';
+    track.style.transform = `translateX(${-(to - 1) * 100}%)`;
+  }
+  if (focusRole) {
+    const again = document.querySelector(`[data-slide-role="${focusRole}"]`) || document.querySelector('[data-slide-role="viewport"]');
+    if (again instanceof HTMLElement) again.focus({ preventScroll: true });
+  }
+}
+
+/**
+ * The frame takes the height of the slide on show (Hour 5, with two celebrities, is
+ * taller than the rest). A ResizeObserver keeps it right when the card art loads late.
+ */
+let slideObserver = null;
+let observedSlide = null;
+function fitCarousel() {
+  const viewport = document.querySelector('[data-carousel]');
+  const slide = viewport ? viewport.querySelector('.sf-now-slide.is-viewed') : null;
+  if (!viewport || !slide) return;
+  const h = `${slide.offsetHeight}px`;
+  if (viewport.style.height !== h) viewport.style.height = h;
+  if (typeof ResizeObserver === 'function' && observedSlide !== slide) {
+    if (!slideObserver) slideObserver = new ResizeObserver(() => fitCarousel());
+    slideObserver.disconnect();
+    slideObserver.observe(slide);
+    observedSlide = slide;
+  }
+}
+
+/** Swipe left or right on the celebrity panel (touch, pen or a mouse drag). */
+const swipe = { x: 0, y: 0, active: false, at: 0 };
+function onPointerDown(e) {
+  const area = e.target instanceof Element ? e.target.closest('[data-carousel]') : null;
+  swipe.active = !!area && app.screen === 'game';
+  swipe.x = e.clientX;
+  swipe.y = e.clientY;
+}
+function onPointerUp(e) {
+  if (!swipe.active) return;
+  swipe.active = false;
+  const dx = e.clientX - swipe.x;
+  const dy = e.clientY - swipe.y;
+  if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  swipe.at = performance.now(); // the click that follows a swipe is not a click
+  slideNow(viewedHour(app.state) + (dx < 0 ? 1 : -1));
 }
 
 function routeShown(state, card) {
@@ -336,6 +422,7 @@ function render() {
     `<div class="sf-promptbar">${renderPrompt(ctx)}</div><div class="sf-boardwrap">${renderBoard(ctx.state, bctx)}${renderFloats(ctx)}${renderToast(ctx)}</div>`,
   );
   setRegion('sf-side', renderSide(ctx));
+  fitCarousel();
   const modal = modalFor(ctx);
   const modalHtml = modal ? renderModal(ctx, modal) : '';
   const rootEl = document.getElementById('sf-modal-root');
@@ -852,6 +939,15 @@ function onClick(e) {
   if (app.screen === 'setup') return;
   const t = e.target;
   if (!(t instanceof Element)) return;
+  if (swipe.at && performance.now() - swipe.at < 400 && t.closest('[data-carousel]')) {
+    swipe.at = 0;
+    return;
+  }
+  const slideEl = t.closest('[data-slide]');
+  if (slideEl) {
+    if (!slideEl.disabled) slideNow(Number(slideEl.dataset.slide));
+    return;
+  }
   const actEl = t.closest('[data-act]');
   if (actEl && !actEl.disabled) {
     void onAct(actEl.dataset.act, actEl);
@@ -942,6 +1038,12 @@ function onKey(e) {
     }
     return;
   }
+  // the celebrity panel: left and right arrows move between Hours
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target instanceof Element && e.target.closest('[data-carousel-root]') && !e.target.matches('input, textarea, select')) {
+    e.preventDefault();
+    slideNow(viewedHour(app.state) + (e.key === 'ArrowRight' ? 1 : -1));
+    return;
+  }
   // a celebrity (board figure or schedule Hour) that is not an action target: Enter shows or hides its route
   if ((e.key === 'Enter' || e.key === ' ') && e.target instanceof Element && e.target.matches('[data-route-toggle][role="button"]:not(.is-legal):not(.is-illegal):not(.is-dimmed):not(.is-selected)')) {
     e.preventDefault();
@@ -983,6 +1085,9 @@ async function boot() {
   });
   document.addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
+  document.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('resize', fitCarousel);
   document.addEventListener('mouseover', onHover);
   window.addEventListener('resize', () => { if (app.screen === 'game') { app.regions['sf-stage'] = null; } });
   exposeTestApi();

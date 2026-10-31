@@ -2121,3 +2121,36 @@ ul.sf-htp__acts { list-style: none; padding: 0; grid-template-columns: repeat(au
 }
 .sf-route-btn.is-route-shown { background: var(--cc, var(--ink)); color: #fff; }
 .sf-route-hint { margin-top: 4px; font-size: var(--fs-xs); color: var(--ink-soft); }
+
+/* ---- Celebrity panel as a sliding frame: one slide per Hour, arrows, dots and "n / 5" ---- */
+.sf-now-viewport { overflow-x: clip; overflow-y: visible; touch-action: pan-y; border-radius: var(--r-sm); }
+.sf-now-viewport:focus-visible { outline: 3px solid var(--hi); outline-offset: 3px; }
+.sf-now-track { display: flex; transition: transform 0.32s var(--ease-out, ease); will-change: transform; }
+.sf-now-slide { flex: 0 0 100%; min-width: 0; }
+.sf-now-slide.is-done .sf-now { opacity: 0.6; }
+.sf-now-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: var(--s2); }
+.sf-now-nav__btn {
+  width: 34px; height: 34px; padding: 0 0 3px; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--paper-2); color: var(--ink); box-shadow: var(--clay-drop);
+  font-family: var(--font-ui); font-size: 24px; font-weight: 900; line-height: 1;
+}
+.sf-now-nav__btn:hover:not(:disabled) { background: var(--hi); }
+.sf-now-nav__btn:disabled { opacity: 0.35; cursor: default; }
+.sf-now-nav__dots { display: flex; align-items: center; gap: 6px; }
+.sf-now-dot { width: 13px; height: 13px; padding: 0; border: 2px solid var(--cc); border-radius: 50%; background: transparent; cursor: pointer; transition: transform 0.2s; }
+.sf-now-dot.is-viewed { background: var(--cc); transform: scale(1.3); }
+.sf-now-dot.is-current { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--zone-star); }
+.sf-now-dot.is-done { opacity: 0.45; }
+.sf-now-nav__count { min-width: 3.2em; text-align: center; font-family: var(--font-ui); font-size: var(--fs-sm); font-weight: 900; color: var(--ink-soft); }
+.sf-now-back {
+  padding: 4px 10px; border: 2px solid var(--zone-star); border-radius: var(--r-pill); cursor: pointer;
+  background: #fff; color: var(--zone-star); font-family: var(--font-ui); font-size: 11px; font-weight: 800;
+}
+.sf-now-nav__btn:focus-visible, .sf-now-dot:focus-visible, .sf-now-back:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .sf-now-track { transition: none; } }
+.sf-now-viewport { transition: height 0.32s var(--ease-out, ease); }
+.sf-now-track { align-items: flex-start; }
+@media (prefers-reduced-motion: reduce) { .sf-now-viewport { transition: none; } }
+/* the track is as tall as the tallest slide and hangs below the frame: only the slide on show takes clicks */
+.sf-now-track { pointer-events: none; }
+.sf-now-slide.is-viewed { pointer-events: auto; }
