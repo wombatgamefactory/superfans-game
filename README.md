@@ -68,6 +68,7 @@ Exit code 0 means the replay matches the record.
 `src/ui/config.js` holds the values only the owner can supply. An empty value switches its feature off:
 
 - `GA4_MEASUREMENT_ID` - the Google Analytics 4 id (`G-XXXXXXXXXX`), set. Empty: no analytics script is loaded and nothing is sent. Local addresses (`localhost`, `127.0.0.1`, `file:`) never send, so local play and the tests stay out of the figures; add `?ga_debug=1` to the address to send from a local run and watch the events in GA4 DebugView.
+- `COOKIEYES_ID` - the CookieYes site id for the cookie banner (`src/ui/consent.js`). Set: on the published site the banner loads and analytics waits until the visitor accepts the Analytics category (events from before the choice are held, then sent or dropped); the landing page footer gets a "Cookie settings" link. Empty: no banner. The banner never loads on a local address.
 - `BUG_REPORT_EMAIL` - where the "Email this report" link in the Report a problem dialog goes. Empty: the email link is hidden (the report can still be downloaded).
 - `VERSION` - shown in game records and analytics.
 

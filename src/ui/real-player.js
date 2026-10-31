@@ -13,8 +13,9 @@
 
 import { EVENTS, scoreGame, describeAction, nonDefaultVariants, topFrame } from '../engine/index.js';
 import {
-  track, gameStartParams, hourEndParams, gameEndParams, trackAbandoned, reasonCode, safeToken,
+  track, gameStartParams, hourEndParams, gameEndParams, trackAbandoned, reasonCode, safeToken, localVisit,
 } from './analytics.js';
+import { loadConsentBanner } from './consent.js';
 import { collectStats, winnerSources } from './stats.js';
 import { addGame, summarise, installHistoryClear } from './history.js';
 import { installEndTabs } from './stats-view.js';
@@ -33,6 +34,9 @@ export const REFUSAL_CAP = 40;
  */
 export function installRealPlayerTools({ registerHooks, getContext }) {
   const session = { startedAt: 0, ended: true, refusals: 0, lastHumanActor: null, rulesOpen: false, hourSent: new Set() };
+
+  // The cookie banner (published site only; consent.js). Analytics waits for its answer.
+  loadConsentBanner({ local: localVisit() });
 
   installEndTabs();
   installHistoryClear();

@@ -15,6 +15,7 @@ import { VARIANTS, defaultVariants, nonDefaultVariants, RULES } from '../engine/
 import { howToPlayHtml } from './how-to-play.js';
 import { track } from './analytics.js';
 import { openDialog as openBugReport } from './bug-report-ui.js';
+import { consentRequired, openCookieSettings } from './consent.js';
 
 export const COLOUR_IDS = ['blue', 'yellow', 'pink', 'green', 'red'];
 const COLOUR_LABEL = { blue: 'Blue', yellow: 'Yellow', pink: 'Pink', green: 'Green', red: 'Red' };
@@ -224,7 +225,7 @@ function belowTheFoldHtml() {
 
   <footer class="sf-footer">
     <p>Superfans, a board game by Dean Morris &middot; Wombat Game Factory</p>
-    <p class="sf-footer__links"><a href="#how-to-play" data-rules>How to play</a> &middot; <a href="#report" data-bug>Report a bug</a></p>
+    <p class="sf-footer__links"><a href="#how-to-play" data-rules>How to play</a> &middot; <a href="#report" data-bug>Report a bug</a>${consentRequired() ? ' &middot; <a href="#cookies" class="cky-banner-element" data-cookie-settings>Cookie settings</a>' : ''}</p>
   </footer>`;
 }
 
@@ -370,6 +371,11 @@ export function showSetup(root, options) {
     if (t.closest('[data-bug]')) {
       e.preventDefault();
       openBugReport();
+      return;
+    }
+    if (t.closest('[data-cookie-settings]')) {
+      e.preventDefault();
+      openCookieSettings();
       return;
     }
     const type = t.closest('[data-type]');

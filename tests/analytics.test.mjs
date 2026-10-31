@@ -128,8 +128,14 @@ try {
       const cfg = await import('/src/ui/config.js');
       if (!cfg.CONFIG.GA4_MEASUREMENT_ID) cfg.CONFIG.GA4_MEASUREMENT_ID = 'G-TEST1234';
     });
+    const cky = [];
+    await page.route(/cdn-cookieyes/, (route) => {
+      cky.push(route.request().url());
+      route.fulfill({ status: 200, contentType: 'text/javascript', body: '' });
+    });
     await page.click('[data-start]');
     await page.waitForFunction(() => window.__sf.screen === 'end', null, { timeout: 120000 });
+    ok(cky.length === 0 && (await page.locator('script#cookieyes').count()) === 0, 'no cookie banner script on a local address');
     ok(await page.evaluate(async () => (await import('/src/ui/analytics.js')).localVisit()), 'the test server counts as a local visit');
     ok(google.length === 0, `no request to Google from a local address (got ${google.length})`);
     ok((await page.locator('script[src*="googletagmanager"]').count()) === 0, 'no gtag script tag on a local address');
@@ -244,6 +250,75 @@ try {
     ok(names[0] === 'game_start' && names.filter((n) => n === 'hour_end').length === 5 && names[names.length - 1] === 'game_end', `events reach gtag in order: ${names.join(',')}`);
     ok(gtagRequests.length === 1 && /id=G-TEST1234/.test(gtagRequests[0]), 'the gtag script is requested once, with the id');
     ok((await page.locator('script[src*="googletagmanager.com/gtag/js"]').count()) === 1, 'one gtag script tag');
+    assert.deepEqual(errors, [], errors.join(' | '));
+    await page.close();
+  }
+
+  // ---- 4. cookie consent on the published site (simulated: local override off, CookieYes faked) ----
+  for (const choice of ['accept', 'reject', 'no-banner']) {
+    const { page, errors } = await openPage(browser, server, 'seats=m,e&seed=36&speed=instant&autostart=0');
+    const google = [];
+    await page.route(/googletagmanager|google-analytics/, (route) => {
+      google.push(route.request().url());
+      route.fulfill({ status: 200, contentType: 'text/javascript', body: '' });
+    });
+    const r = await page.evaluate(async (choice) => {
+      const cfg = await import('/src/ui/config.js');
+      const a = await import('/src/ui/analytics.js');
+      const c = await import('/src/ui/consent.js');
+      a._resetForTests();
+      c._resetConsentForTests();
+      if (!cfg.CONFIG.GA4_MEASUREMENT_ID) cfg.CONFIG.GA4_MEASUREMENT_ID = 'G-TEST1234';
+      if (!cfg.CONFIG.COOKIEYES_ID) cfg.CONFIG.COOKIEYES_ID = 'test';
+      a._setLocalOverrideForTests(false);
+      let consent = { categories: { analytics: false }, isUserActionCompleted: false };
+      if (choice !== 'no-banner') window.getCkyConsent = () => consent;
+      const out = {};
+      out.before = c.analyticsConsent();
+      out.sent = [a.track('game_start', { player_count: 2 }), a.track('hour_end', { hour: 1 })];
+      out.held = a.heldCount();
+      out.gtagBefore = typeof window.gtag;
+      if (choice === 'accept') {
+        consent = { categories: { analytics: true }, isUserActionCompleted: true };
+        document.dispatchEvent(new CustomEvent('cookieyes_consent_update', { detail: { accepted: ['necessary', 'analytics'], rejected: [] } }));
+      } else if (choice === 'reject') {
+        consent = { categories: { analytics: false }, isUserActionCompleted: true };
+        document.dispatchEvent(new CustomEvent('cookieyes_consent_update', { detail: { accepted: ['necessary'], rejected: ['analytics'] } }));
+      }
+      out.after = c.analyticsConsent();
+      out.heldAfter = a.heldCount();
+      out.later = a.track('game_end', { winning_score: 99 });
+      out.layer = (window.dataLayer || []).filter((x) => x[0] === 'event').map((x) => x[1]);
+      a._setLocalOverrideForTests(null);
+      return out;
+    }, choice);
+    ok(r.sent.every((s) => s === false) && r.held === 2 && r.gtagBefore === 'undefined', `${choice}: before a choice events are held, Google not loaded (${JSON.stringify(r)})`);
+    if (choice === 'accept') {
+      ok(r.after === 'granted' && r.heldAfter === 0 && r.later === true, `accept: held events released, later events sent`);
+      ok(r.layer.join() === 'game_start,hour_end,game_end', `accept: events reach gtag in order (${r.layer.join()})`);
+      // the script tag is added synchronously but its request leaves a moment later
+      for (let i = 0; i < 50 && google.length === 0; i++) await page.waitForTimeout(100);
+      ok(google.length === 1, `accept: Google's script loaded once (got ${google.length})`);
+    } else if (choice === 'reject') {
+      ok(r.after === 'denied' && r.heldAfter === 0 && r.later === false && r.layer.length === 0, 'reject: held events dropped, nothing sent');
+      ok(google.length === 0, 'reject: Google never contacted');
+    } else {
+      ok(r.after === 'unknown' && r.later === false && r.layer.length === 0 && google.length === 0, 'banner blocked or missing: nothing sent');
+    }
+    assert.deepEqual(errors, [], errors.join(' | '));
+    await page.close();
+  }
+
+  // ---- 5. the landing page offers "Cookie settings" when a banner is configured ----
+  {
+    const { page, errors } = await openPage(browser, server, '');
+    const has = await page.locator('[data-cookie-settings].cky-banner-element').count();
+    ok(has === (CONFIG.COOKIEYES_ID ? 1 : 0), `Cookie settings link present iff COOKIEYES_ID is set (${has})`);
+    if (has) {
+      await page.evaluate(() => { window.__revisited = 0; window.revisitCkyConsent = () => { window.__revisited++; }; });
+      await page.click('[data-cookie-settings]');
+      ok(await page.evaluate(() => window.__revisited === 1 && location.hash !== '#cookies'), 'Cookie settings reopens the CookieYes preferences, no hash jump');
+    }
     assert.deepEqual(errors, [], errors.join(' | '));
     await page.close();
   }

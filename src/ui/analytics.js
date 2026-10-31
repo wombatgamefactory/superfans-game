@@ -14,6 +14,11 @@
 // Local visits (localhost, 127.0.0.1, ::1, *.local, file:) send nothing unless the
 // address has ?ga_debug=1, so development and the test suite never reach GA.
 //
+// Consent (consent.js): on the published site nothing is sent, and Google's
+// script is not even loaded, until the visitor accepts the Analytics cookie
+// category in the CookieYes banner. Events from before the choice are held (up
+// to QUEUE_CAP) and sent if they accept, dropped if they reject.
+//
 // track() never throws: analytics must not be able to cost anybody a turn.
 //
 // Test hook: setSink(fn) sends the cleaned events to fn instead of gtag, so the
@@ -31,9 +36,15 @@
 //   bug_report_opened        screen
 
 import { CONFIG } from './config.js';
+import { analyticsConsent, onConsentChange } from './consent.js';
 
 let injected = false;
 let sink = null;
+let localOverride = null; // tests only: force a local / non-local visit
+let consentWired = false;
+/** Events held while the visitor has not yet chosen (consent 'unknown'). */
+const held = [];
+export const QUEUE_CAP = 30;
 
 /** Every event name this module sends, with its parameter names (the GA doc and the tests read this table). */
 export const EVENT_TABLE = Object.freeze({
@@ -77,6 +88,7 @@ function debugVisit() {
 
 /** A development or test address: nothing is sent from here without ?ga_debug=1. */
 export function localVisit() {
+  if (localOverride !== null) return localOverride;
   if (typeof location === 'undefined') return false;
   const h = String(location.hostname || '').toLowerCase();
   return location.protocol === 'file:' || h === '' || h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || h.endsWith('.local');
@@ -116,13 +128,56 @@ export function track(event, params = {}) {
       sink(String(event), cleaned);
       return true;
     }
-    if (localVisit() && !debugVisit()) return false;
+    const local = localVisit();
+    if (local && !debugVisit()) return false;
+    if (!local) {
+      // A local ?ga_debug=1 run has no banner, so consent applies to the published site only.
+      const consent = analyticsConsent();
+      if (consent === 'denied') return false;
+      if (consent === 'unknown') {
+        wireConsent();
+        if (held.length < QUEUE_CAP) held.push([String(event), cleaned]);
+        return false;
+      }
+    }
     if (!inject(id)) return false;
     window.gtag('event', String(event), cleaned);
     return true;
   } catch {
     return false;
   }
+}
+
+/** Sends the held events once the visitor accepts; forgets them if they reject. */
+function wireConsent() {
+  if (consentWired) return;
+  consentWired = true;
+  onConsentChange((state) => {
+    try {
+      if (state === 'denied') {
+        held.length = 0;
+        return;
+      }
+      if (state !== 'granted' || !analyticsOn() || sink) return;
+      if (!inject(CONFIG.GA4_MEASUREMENT_ID.trim())) return;
+      while (held.length) {
+        const [e, p] = held.shift();
+        window.gtag('event', e, p);
+      }
+    } catch {
+      // analytics must never cost a turn
+    }
+  });
+}
+
+/** For tests: how many events are waiting for a consent choice. */
+export function heldCount() {
+  return held.length;
+}
+
+/** For tests: true = behave as a local visit, false = as the published site, null = read the address. */
+export function _setLocalOverrideForTests(value) {
+  localOverride = value === true || value === false ? value : null;
 }
 
 // ---- parameter builders (pure: tested in Node) ------------------------------------------------------
@@ -242,4 +297,7 @@ export function trackAbandoned(seats, hour, durationMs) {
 export function _resetForTests() {
   injected = false;
   sink = null;
+  localOverride = null;
+  consentWired = false;
+  held.length = 0;
 }
