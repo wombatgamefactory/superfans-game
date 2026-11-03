@@ -520,6 +520,21 @@ def build_generated():
 
 
 # ---------------------------------------------------------------- placeholders for what is missing
+def build_celebrity_figures():
+    """Register the per-celebrity cut-outs made by tools/cut-celebrity-figures.py (rembg is not a
+    dependency here, so this only picks up the files already on disk)."""
+    for p in sorted((ASSETS / "figures").glob("celebrity-*.webp")):
+        key = p.stem.removeprefix("celebrity-")
+        if key == "neutral":
+            continue
+        with Image.open(p) as im:
+            w, h = im.size
+        add(f"figure-celebrity-{key}", f"figures/{p.name}", (w, h, p.stat().st_size), "real",
+            f"assets/portraits/celebrity-{key}.webp (rembg cut-out)",
+            f"Transparent cut-out of celebrity {key}: the full-body clay figure from its standee portrait, background removed",
+            "celebrity figure standing in its hall on the board")
+
+
 def build_placeholders():
     sq = (256, 256)
     add_placeholder("placeholder-generic", "image missing", (256, 256), "placeholder", "Generic stand-in when an id has no art",
@@ -588,6 +603,7 @@ def main():
         build_psd_icons()
         build_psd_logo()
     build_generated()
+    build_celebrity_figures()
     build_placeholders()
     entries.sort(key=lambda e: e["id"])
     write_manifest(colours)

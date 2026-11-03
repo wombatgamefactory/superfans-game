@@ -91,10 +91,10 @@ try {
       if (w === 1366) {
         // colour de-duplication: seat 2's colour is disabled on seat 1, and swaps follow
         const s0 = page.locator('.sf-seat').nth(0);
-        ok(await s0.locator('[data-colour="yellow"]').isDisabled(), 'a colour taken by another seat is disabled');
-        await pointerClick(page, '.sf-seat >> nth=0 >> [data-colour="red"]');
-        ok(await page.locator('.sf-seat').nth(1).locator('[data-colour="red"]').isDisabled(), 'the new colour is now taken for seat 2');
-        ok(!(await page.locator('.sf-seat').nth(1).locator('[data-colour="blue"]').isDisabled()), 'the old colour is free again');
+        ok(await s0.locator('[data-colour="blue"]').isDisabled(), 'a colour taken by another seat is disabled');
+        await pointerClick(page, '.sf-seat >> nth=0 >> [data-colour="yellow"]');
+        ok(await page.locator('.sf-seat').nth(1).locator('[data-colour="yellow"]').isDisabled(), 'the new colour is now taken for seat 2');
+        ok(!(await page.locator('.sf-seat').nth(1).locator('[data-colour="red"]').isDisabled()), 'the old colour is free again');
         // seat limits
         ok(await page.locator('[data-remove="0"]').isDisabled(), 'cannot go below 2 seats');
         for (let i = 0; i < 3; i += 1) await pointerClick(page, '[data-add]');
@@ -118,7 +118,7 @@ try {
         await pointerClick(page, '[data-start]');
         await page.waitForFunction(() => window.__sf.screen === 'game' && window.__sf.state);
         ok((await page.evaluate(() => window.__sf.state.variants.clubs)) === 'off', 'the chosen variant is in the game');
-        ok((await page.evaluate(() => window.__sf.seats.map((s) => s.colour).join(','))) === 'red,yellow', 'the chosen colours are in the game');
+        ok((await page.evaluate(() => window.__sf.seats.map((s) => s.colour).join(','))) === 'yellow,blue', 'the chosen colours are in the game');
       }
       noErrors(errors, `landing ${w}`);
       await page.close();

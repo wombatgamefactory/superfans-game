@@ -41,6 +41,12 @@ export function artUrl(id) {
   return e ? ASSET_ROOT + e.file : null;
 }
 
+/** The pixel size [width, height] of an id's file, or null. */
+export function artSize(id) {
+  const e = entries.get(id);
+  return e && e.width && e.height ? [e.width, e.height] : null;
+}
+
 export function escapeHtml(text) {
   return String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
@@ -116,6 +122,12 @@ export function crewPiece(colour, badge, { px = false, label = '', cls = '', tar
   const box = b === 'aaa' ? art('overlay-aaa-box', { cls: 'sf-crew__box', alt: '' }) : '';
   const attr = target ? ` data-target="${escapeHtml(target)}"` : '';
   return `<span class="sf-crew sf-crew--${b}${px ? ' sf-crew--px' : ''} ${cls}"${attr}${attrs ? ` ${attrs}` : ''}${label ? ` title="${escapeHtml(label)}"` : ''}>${box}${art(crewArt(colour), { cls: 'sf-crew__body', alt: '' })}${hat}</span>`;
+}
+
+/** The cut-out figure of a celebrity card, or the neutral figure when that celebrity has none. */
+export function celebFigureArt(card) {
+  const id = card && card.portrait ? card.portrait.replace(/^portrait-/, 'figure-') : '';
+  return hasArt(id) ? id : 'figure-celebrity-neutral';
 }
 
 export const SELFIE_COLOURS = Object.freeze(['green', 'red', 'orange']);

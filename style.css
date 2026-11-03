@@ -729,7 +729,12 @@ button { font: inherit; color: inherit; }
   border-radius: 2.2cqw 2.2cqw 0 0;
   overflow: hidden;
 }
-.sf-hall__art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 42%; display: block; }
+.sf-hall__art img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 42%; display: block;
+  /* muted so the pieces (which are clay figures too) stand out from the clay crowds in the art */
+  filter: var(--hall-art-filter, saturate(.5) contrast(.78) brightness(1.08) blur(0.1cqw));
+  transform: scale(1.02);   /* hides the blur's soft edge */
+}
 .sf-hall__art::after {   /* soft vignette so pieces read on busy art */
   content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(0,0,0,.18) 0%, transparent 30%, transparent 70%, rgba(20,25,45,.45) 100%);
@@ -737,7 +742,7 @@ button { font: inherit; color: inherit; }
 
 /* Clay sign plate: hall name from data, never baked into art */
 .sf-hall__sign {
-  position: absolute; left: 50%; top: -1.1cqw; transform: translateX(-50%);
+  position: absolute; left: 50%; top: 0.4cqw; transform: translateX(-50%);   /* inside the hall, clear of the Usher space above */
   z-index: 4;
   min-width: 58%; max-width: 92%;
   padding: 0.5cqw 1.6cqw 0.6cqw;
@@ -753,7 +758,7 @@ button { font: inherit; color: inherit; }
 /* The Entrance keeps its clay ENTRANCE lettering (the rules term, fixed);
    the text stays in the DOM for screen readers but is drawn by the art. */
 .sf-hall--entrance .sf-hall__sign {
-  min-width: 70%; height: 4.6cqw; top: -1.6cqw;
+  min-width: 70%; height: 4.6cqw; top: 0.4cqw;   /* inside the hall, clear of the Usher space above */
   background-image: url("assets/ui/entrance-plate.webp");
   background-size: contain;
   color: transparent; text-shadow: none;
@@ -793,33 +798,64 @@ button { font: inherit; color: inherit; }
 /* Pieces standing on the hall art: celebrity figure, destination chair */
 .sf-hall__pieces { position: absolute; left: 0; right: 0; top: 0; height: 58%; z-index: 3; pointer-events: none; }
 
-/* Celebrity figure: ONE neutral clay figure for every celebrity, standing on
-   a disc in the celebrity colour with a glow; identity comes from the portrait
-   medallion. Never hue-filter the figure (it would tint the skin). */
+/* Celebrity figure: each celebrity's own clay figure (cut out of its standee
+   portrait), standing on a disc in the celebrity colour. A white-then-colour
+   sticker outline lifts it off the hall art; the name plate on the base
+   carries the selfie symbol, so colour is never the only cue. Never
+   hue-filter the figure (it would tint the skin). */
 .sf-celeb {
-  position: absolute; left: 5%; bottom: 4%;
-  width: 7cqw; height: 12.5cqw;
+  position: absolute; left: 6%; bottom: 9%;
+  width: 7.5cqw; height: 11cqw;
   display: flex; justify-content: center; align-items: flex-end;
 }
 .sf-celeb::before {   /* coloured disc + glow under the base */
-  content: ""; position: absolute; left: 0; right: 0; bottom: -0.4cqw; height: 3.2cqw;
+  content: ""; position: absolute; left: -0.4cqw; right: -0.4cqw; bottom: -0.8cqw; height: 2.8cqw;
   border-radius: 50%;
   background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--cc) 70%, #fff), var(--cc) 70%);
-  box-shadow: 0 0 1.8cqw 0.6cqw color-mix(in srgb, var(--cc) 70%, transparent), 0 0.3cqw 0 rgba(0,0,0,.35);
+  box-shadow: 0 0 0 0.25cqw #fff, 0 0 2cqw 0.8cqw color-mix(in srgb, var(--cc) 75%, transparent), 0 0.35cqw 0 0.25cqw rgba(0,0,0,.35);
 }
-.sf-celeb__figure { position: relative; height: 100%; width: auto; filter: var(--piece-shadow); }
-.sf-celeb__medallion {
-  position: absolute; left: 72%; top: 4%;
-  width: 4.6cqw; height: 4.6cqw; border-radius: 50%;
-  object-fit: cover; object-position: 50% 10%;
-  border: 0.45cqw solid var(--cc);
-  background: var(--paper);
-  box-shadow: 0 0.3cqw 0.6cqw rgba(0,0,0,.4);
+.sf-celeb__figure {
+  position: relative;
+  height: 100%; width: auto; max-width: 150%;
+  object-fit: contain; object-position: 50% 100%;
+  filter:
+    drop-shadow(0 0 0.12cqw #fff) drop-shadow(0 0 0.12cqw #fff) drop-shadow(0 0 0.1cqw #fff)
+    drop-shadow(0 0 0.3cqw var(--cc)) drop-shadow(0 0 0.3cqw var(--cc))
+    drop-shadow(0 0.5cqw 0.5cqw rgba(0, 0, 0, .55));
+}
+.sf-celeb__name {   /* name plate on the front of the base */
+  position: absolute; left: 50%; bottom: -1.9cqw; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0.3cqw;
+  padding: 0.15cqw 0.7cqw 0.15cqw 0.35cqw;
+  border-radius: var(--r-pill);
+  background: #fff;
+  border: 0.22cqw solid var(--cc);
+  box-shadow: 0 0.25cqw 0.4cqw rgba(0, 0, 0, .4);
+  color: var(--ink);
+  font-size: max(8px, 1.05cqw); font-weight: 900; line-height: 1.25;
+  white-space: nowrap;
 }
 .sf-celeb__symbol {   /* colour is never the only cue: thumb / heart / star */
-  position: absolute; left: 100%; top: 2.8cqw;
-  width: 2.4cqw; height: 2.8cqw;
+  flex: none;
+  width: 1.5cqw; height: 1.6cqw;
   background: center / contain no-repeat;
+}
+.sf-celeb__hour {   /* the celebrity's Hour, in the celebrity colour */
+  flex: none;
+  display: inline-grid; place-items: center;
+  min-width: 1.7cqw; height: 1.7cqw; padding: 0 0.3cqw;
+  border-radius: var(--r-pill);
+  background: var(--cc); color: #fff;
+  font-size: max(8px, 1.05cqw); line-height: 1;
+}
+/* On a small board the name no longer fits inside the hall: keep the Hour and
+   the symbol only (the name is in the tooltip and the celebrity panel). */
+@container board (max-width: 640px) {
+  .sf-celeb__name { font-size: 0; gap: 0.4cqw; padding: 0.4cqw; bottom: -1.6cqw; }
+  .sf-celeb__symbol { width: 2.6cqw; height: 2.8cqw; }
+  .sf-celeb__hour { font-size: max(8px, 2.2cqw); min-width: 3.2cqw; height: 3.2cqw; }
+  /* the hall names keep an 11px minimum and grow relative to the board: drop the destination markers below them */
+  .sf-hall__pieces .sf-dest { top: 30%; }
 }
 .sf-cc--green  .sf-celeb__symbol { background-image: url("assets/icons/selfie-green.webp"); }
 .sf-cc--red    .sf-celeb__symbol { background-image: url("assets/icons/selfie-red.webp"); }
@@ -827,21 +863,21 @@ button { font: inherit; color: inherit; }
 .sf-celeb.is-walking { animation: sf-hop var(--t-step) var(--ease-out) infinite; }
 .sf-celeb.is-now::before { animation: sf-glow 1.2s ease-in-out infinite alternate; }
 
-/* Destination chair (director's chair in the celebrity colour) + Hour tag */
+/* Destination marker: where a celebrity's Walk ends - a white disc with a ring
+   in the celebrity colour and its Hour number (board-render.js DEST_BOX mirrors this) */
 .sf-dest {
-  position: absolute; right: 3%; top: 15%;
-  width: 4.6cqw; height: 6.5cqw;
-  background: center / contain no-repeat;
-  filter: var(--piece-shadow);
+  position: absolute; right: 3%; top: 12%;
+  width: 4.2cqw; height: 4.2cqw;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  border: 0.5cqw solid var(--cc);
+  box-shadow: 0 0 0 0.2cqw rgba(30, 22, 16, .45), 0 0.35cqw 0.5cqw rgba(0, 0, 0, .4);
+  box-sizing: border-box;
 }
-.sf-dest--green  { background-image: url("assets/markers/destination-green.webp"); }
-.sf-dest--red    { background-image: url("assets/markers/destination-red.webp"); }
-.sf-dest--orange { background-image: url("assets/markers/destination-orange.webp"); }
 .sf-dest__hour {
-  position: absolute; left: 50%; bottom: -1.2cqw; transform: translateX(-50%);
-  padding: 0 0.7cqw; border-radius: var(--r-pill);
-  background: var(--ink); color: #fff;
-  font-size: max(9px, 1.1cqw); font-weight: 900; white-space: nowrap; line-height: 1.6;
+  color: var(--cc);
+  font: 900 max(9px, 2cqw)/1 var(--font-ui);
 }
 
 /* First Player marker (gold crowned meeple) - sits on the active lanyard */
@@ -1013,15 +1049,17 @@ button { font: inherit; color: inherit; }
 /* ---------------------------------------------------------------------
    13. Route overlay (SVG): casing + coloured dashed path + arrow + ends
    --------------------------------------------------------------------- */
-.sf-board__overlay .sf-route__line, .sf-board__overlay .sf-route__casing { opacity: .85; }
-.sf-route__casing { fill: none; stroke: #fff; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
-.sf-route__line   { fill: none; stroke: var(--cc); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 13; }
+/* Route: dark edge, white casing, solid colour line; the Hour number travels along it. */
+/* Thin enough that routes in neighbouring lanes (8 units apart) keep a clear gap. */
+.sf-route__edge   { fill: none; stroke: rgba(30, 22, 16, .5); stroke-width: 6.4; stroke-linecap: round; stroke-linejoin: round; }
+.sf-route__casing { fill: none; stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.sf-route__line   { fill: none; stroke: var(--cc); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.sf-route__tokendisc { fill: var(--cc); stroke: #fff; stroke-width: 1.2; }
+.sf-route__tokentext { font: 900 6.2px/1 var(--font-ui); fill: #fff; pointer-events: none; }
 .sf-route__line--solid { stroke-dasharray: none; }
-.sf-route__done   { fill: none; stroke: var(--cc); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; opacity: .45; }
+.sf-route__done   { fill: none; stroke: var(--cc); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: .45; }
 .sf-route__march  { animation: sf-march 0.9s linear infinite; }
-.sf-route__start  { fill: #fff; stroke: var(--cc); stroke-width: 4; }
-.sf-route__end    { fill: var(--cc); stroke: #fff; stroke-width: 4; }
-.sf-route--preview .sf-route__line { opacity: .55; }   /* hover a celebrity card / schedule */
+.sf-route__end    { fill: var(--cc); stroke: #fff; stroke-width: 1.6; }
 
 /* ---------------------------------------------------------------------
    14. Cards (achievement, swag, club, celebrity, pass, aid)
@@ -1048,6 +1086,13 @@ button { font: inherit; color: inherit; }
 /* zoom: market and hand cards grow in place on hover / long-press */
 .sf-card--zoom:hover { transform: translateY(-8px) scale(1.9); z-index: 20; box-shadow: var(--clay-lift); }
 .sf-card--zoom-up:hover { transform-origin: 50% 100%; }
+/* A zoomed card must rise above the next panel down. Its own panel can trap it in a
+   layer (the celebrity panel's sliding track does), so lift the whole panel. */
+:is(.sf-panel, .sf-lanyard):has(.sf-card--zoom:hover) { z-index: 25; }
+/* The side columns cut off anything past their edges: cards at the ends of a row grow inwards. */
+.sf-lanyard__hand > .sf-card--zoom-up:first-child:hover,
+.sf-market__slot:first-child .sf-card--zoom-up:hover { transform-origin: 0 100%; }
+.sf-lanyard__hand > .sf-card--zoom-up:last-child:not(:first-child):hover { transform-origin: 100% 100%; }
 .sf-card__cost {   /* selfie price chip under a swag card */
   position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%);
 }
@@ -1674,6 +1719,28 @@ button { font: inherit; color: inherit; }
   max-width: min(640px, calc(100% - 24px));
   z-index: 40;
 }
+/* Pause / play the route numbers: pinned to the right of the prompt bar, above the board */
+.sf-promptbar { position: relative; }
+.sf-routemotion {
+  position: absolute; right: 0; top: calc(50% - 3px); transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px 5px 9px;
+  border: 2px solid var(--line, rgba(0,0,0,.15)); border-radius: var(--r-pill);
+  background: #fff; color: var(--ink);
+  font: 800 var(--fs-xs)/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(40, 30, 20, .18);
+}
+.sf-routemotion svg { width: 10px; height: 10px; fill: currentColor; }
+.sf-routemotion:hover { background: var(--paper-2, #f4efe6); }
+.sf-routemotion:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }
+/* keep the centred prompt clear of the button */
+.sf-promptbar:has(.sf-routemotion) .sf-banner { max-width: calc(100% - 300px); }
+@media (max-width: 1100px) {
+  .sf-promptbar:has(.sf-routemotion) { height: auto; flex-wrap: wrap; gap: 6px; }
+  .sf-promptbar:has(.sf-routemotion) .sf-banner { max-width: 100%; }
+  .sf-routemotion { position: static; transform: none; }
+}
 @media (max-width: 700px) {
   .sf-promptbar { height: auto; min-height: var(--banner-h); }
   .sf-boardwrap .sf-toast { top: auto; bottom: 8px; }
@@ -1780,10 +1847,6 @@ button { font: inherit; color: inherit; }
 /* Volunteer spaces sit on the hall art, above the queue, so queue slot 5 (bottom right) is never hidden behind them */
 .sf-hall__vols { bottom: calc(42% + 0.7cqw); right: 0.9cqw; }
 /* the route of a celebrity who has not walked yet is a light preview: it must not hide hall signs or art */
-.sf-route--preview .sf-route__casing { opacity: 0.3; stroke-width: 7; }
-.sf-route--preview .sf-route__line { stroke-width: 4; opacity: 0.7; }
-.sf-route--preview .sf-route__start { r: 5; }
-.sf-route--preview .sf-route__end { r: 6; }
 .sf-lanyard__strap { line-height: 16px; }
 @media (max-width: 1400px) {
   :root { --players-h: 100px; }
@@ -2098,8 +2161,6 @@ ul.sf-htp__acts { list-style: none; padding: 0; grid-template-columns: repeat(au
 /* ---- Celebrity route toggles: click a celebrity (board figure, This Hour list, top-bar Hour) to show or hide its route ---- */
 .sf-celeb.is-route-shown:not(.is-legal):not(.is-selected) { filter: drop-shadow(0 0 0.4cqw #fff) drop-shadow(0 0 0.9cqw var(--cc)); }
 .sf-celeb[data-route-toggle]:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; border-radius: 1cqw; }
-.sf-route--numbered .sf-route__start { r: 8; }
-.sf-route__hour { font: 900 10px/1 var(--font-ui); fill: var(--cc); pointer-events: none; }
 .sf-hour[data-route-toggle] { cursor: pointer; }
 .sf-hour[data-route-toggle]:hover { filter: brightness(1.06); }
 .sf-hour[data-route-toggle]:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }

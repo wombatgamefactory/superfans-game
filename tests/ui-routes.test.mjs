@@ -18,7 +18,7 @@ const browser = await launch();
 try {
   const { page, errors } = await openPage(browser, server, 'seats=h,m&seed=5&speed=fast', { width: 1600, height: 1000 });
   await page.waitForFunction(() => window.__sf.screen === 'game' && window.__sf.state && window.__sf.state.phase === 'floor' && window.__sf.seats[window.__sf.state.toAct].kind === 'human' && !window.__sf.busy, null, { timeout: 60000 });
-  const hours = () => page.evaluate(() => [...document.querySelectorAll('.sf-board__overlay .sf-route__hour')].map((t) => Number(t.textContent)).sort());
+  const hours = () => page.evaluate(() => [...document.querySelectorAll('.sf-board__overlay [data-route-hour]')].map((t) => Number(t.dataset.routeHour)).sort());
   const nowHour = await page.evaluate(() => window.__sf.state.hour);
 
   ok(JSON.stringify(await hours()) === JSON.stringify([nowHour]), `by default only this Hour's route is drawn (${await hours()})`);
@@ -72,7 +72,7 @@ try {
   {
     const { page, errors } = await openPage(browser, server, 'seats=h,m&seed=5&speed=fast', { width: 1600, height: 1000 });
     await page.waitForFunction(() => window.__sf.screen === 'game' && window.__sf.state && window.__sf.state.phase === 'floor' && window.__sf.seats[window.__sf.state.toAct].kind === 'human' && !window.__sf.busy, null, { timeout: 60000 });
-    const routeHours = () => page.evaluate(() => [...document.querySelectorAll('.sf-board__overlay .sf-route__hour')].map((t) => Number(t.textContent)).sort());
+    const routeHours = () => page.evaluate(() => [...document.querySelectorAll('.sf-board__overlay [data-route-hour]')].map((t) => Number(t.dataset.routeHour)).sort());
     const count = () => page.textContent('.sf-now-nav__count');
     const viewedSlide = () => page.evaluate(() => Number(document.querySelector('.sf-now-slide.is-viewed').dataset.nowSlide));
     ok((await count()).trim() === '1 / 5' && (await viewedSlide()) === 1, `opens on Hour 1 (${await count()})`);

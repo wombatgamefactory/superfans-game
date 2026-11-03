@@ -17,7 +17,7 @@ import { track } from './analytics.js';
 import { openDialog as openBugReport } from './bug-report-ui.js';
 import { consentRequired, openCookieSettings } from './consent.js';
 
-export const COLOUR_IDS = ['blue', 'yellow', 'pink', 'green', 'red'];
+export const COLOUR_IDS = ['red', 'blue', 'yellow', 'pink', 'green'];
 const COLOUR_LABEL = { blue: 'Blue', yellow: 'Yellow', pink: 'Pink', green: 'Green', red: 'Red' };
 const LEVEL_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 const STORE_KEY = 'superfans-setup-v1';
@@ -46,8 +46,8 @@ function valueLabel(name, value) {
 /** Default seats for a first visit: one human against a Medium bot. */
 export function defaultSeats() {
   return [
-    { kind: 'human', level: null, name: 'Player 1', colour: 'blue' },
-    { kind: 'bot', level: 'medium', name: 'Medium Bot', colour: 'yellow' },
+    { kind: 'human', level: null, name: 'Player 1', colour: 'red' },
+    { kind: 'bot', level: 'medium', name: 'Medium Bot', colour: 'blue' },
   ];
 }
 

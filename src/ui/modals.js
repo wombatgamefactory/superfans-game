@@ -23,6 +23,7 @@ import { art, escapeHtml, ICON, SELFIE_COLOURS, SYMBOL_WORD } from './art.js';
 import { previewAchievementVp } from './preview.js';
 import { selfiesHtml } from './panels.js';
 import { howToPlayHtml } from './how-to-play.js'; // T17
+import { routesMove } from './ui-state.js';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -218,6 +219,9 @@ function settings(ctx) {
     `<div class="sf-settings">
       <div><b>Bot speed</b><div class="sf-seg" role="group" aria-label="Bot speed">${speeds
         .map(([id, label]) => `<button class="${ctx.view.speed === id ? 'is-selected' : ''}" data-act="speed:${id}">${label}</button>`)
+        .join('')}</div></div>
+      <div><b>Route numbers</b><div class="sf-seg" role="group" aria-label="Route numbers">${[['moving', 'Moving'], ['still', 'Still']]
+        .map(([id, label]) => `<button class="${(routesMove() ? 'moving' : 'still') === id ? 'is-selected' : ''}" data-act="route-motion:${id}">${label}</button>`)
         .join('')}</div></div>
       <div><b>Game</b><div class="sf-settings__row"><button class="sf-btn" data-act="new-game">New game (setup)</button></div></div>
       <p class="sf-setup__hint">Seed ${escapeHtml(String(ctx.seed))}. ${ctx.botsReal ? '' : 'The practice bot is playing at random for now.'}</p>

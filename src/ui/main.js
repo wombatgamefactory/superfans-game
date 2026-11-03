@@ -36,7 +36,7 @@ import { loadBots, botLevels, FALLBACK_LEVELS } from './bots-bridge.js';
 import { createBotDriver } from './bot-driver.js';
 import {
   getView, getPending, arm, setPicked, cancelPending, resetPending, setNotice, clearNotice, openModal, closeModal,
-  setFlash, clearFlash, resetForNewGame, escape as escapeKey, nextId,
+  setFlash, clearFlash, resetForNewGame, escape as escapeKey, nextId, writePref, routesMove,
 } from './ui-state.js';
 import { eligibleEntries, resolveClick, stepOf, refusalReason, kindOfKey, valueOfKey, BUTTON_FRAMES, SLOT_DEFS } from './action-targets.js';
 import { renderBoard, makeClasser, fullTag } from './board-render.js';
@@ -336,7 +336,10 @@ function boardCtx(ctx) {
   const state = ctx.state;
   const routes = [];
   if (view.walk) {
-    for (const w of view.walk.routes) routes.push({ card: w.card, colour: w.colour, doneTo: w.doneTo, preview: false });
+    for (const w of view.walk.routes) {
+      const entry = state.schedule.find((e) => e.card === w.card);
+      routes.push({ card: w.card, colour: w.colour, doneTo: w.doneTo, preview: false, tag: entry ? entry.hour : undefined });
+    }
   } else if (state.phase !== 'final' && state.phase !== 'ended') {
     // future Hours first, so this Hour's route is drawn on top
     const shown = state.schedule.filter((e) => e.status !== 'done' && routeShown(state, e.card));
@@ -351,6 +354,7 @@ function boardCtx(ctx) {
     tags: ctx.tags,
     view,
     routes,
+    animateRoutes: routesMove(),
     walkingCard: view.walk ? walking : null,
     sourceHall: sourceCrew ? sourceCrew.hall : null,
     dim: false,
@@ -410,6 +414,16 @@ function flipCrew(before) {
   }
 }
 
+/** The pause / play switch for the numbers travelling along the routes (same choice as Settings > Route numbers). */
+function routeMotionButton(moving) {
+  const icon = moving
+    ? '<svg viewBox="0 0 10 10" aria-hidden="true"><rect x="1.5" y="1" width="2.6" height="8" rx=".8"/><rect x="5.9" y="1" width="2.6" height="8" rx=".8"/></svg>'
+    : '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 1.2 L9 5 L2 8.8 Z"/></svg>';
+  const label = moving ? 'Pause routes' : 'Animate routes';
+  const tip = moving ? 'Stop the numbers moving along the routes' : 'Make the numbers move along the routes';
+  return `<button class="sf-routemotion" data-act="route-motion:${moving ? 'still' : 'moving'}" aria-pressed="${!moving}" title="${tip}">${icon}<span>${label}</span></button>`;
+}
+
 function render() {
   if (app.screen === 'end' || app.screen === 'setup' || !app.state) return;
   ensureGameDom();
@@ -419,7 +433,7 @@ function render() {
   setRegion('sf-players', renderPlayers(ctx));
   setRegion(
     'sf-stage',
-    `<div class="sf-promptbar">${renderPrompt(ctx)}</div><div class="sf-boardwrap">${renderBoard(ctx.state, bctx)}${renderFloats(ctx)}${renderToast(ctx)}</div>`,
+    `<div class="sf-promptbar">${renderPrompt(ctx)}${bctx.routes.length ? routeMotionButton(bctx.animateRoutes) : ''}</div><div class="sf-boardwrap">${renderBoard(ctx.state, bctx)}${renderFloats(ctx)}${renderToast(ctx)}</div>`,
   );
   setRegion('sf-side', renderSide(ctx));
   fitCarousel();
@@ -771,6 +785,7 @@ async function onAct(name, el) {
     default: break;
   }
   if (verb === 'speed') { view.speed = arg; app.driver.kick(); render(); return; }
+  if (verb === 'route-motion' && (arg === 'moving' || arg === 'still')) { view.routeMotion = arg; writePref('sf-route-motion', arg); render(); return; }
   if (verb === 'opt') {
     const m = view.modal;
     if (m && m.options && m.options[Number(arg)]) {
@@ -1059,7 +1074,7 @@ function onKey(e) {
 // ---- boot ----------------------------------------------------------------------------------------------------------------------------
 
 function seatsFromParam(text) {
-  const colours = ['blue', 'yellow', 'pink', 'green', 'red'];
+  const colours = ['red', 'blue', 'yellow', 'pink', 'green'];
   return text.split(',').filter(Boolean).slice(0, 5).map((t, i) => {
     const kind = t === 'human' || t === 'h' ? 'human' : 'bot';
     const level = kind === 'bot' ? ({ e: 'easy', m: 'medium', d: 'hard', b: 'medium' }[t] ?? t) : null;

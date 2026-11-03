@@ -1589,6 +1589,72 @@
    "usedIn": "landing page, splash"
   },
   {
+   "id": "figure-celebrity-mando-01",
+   "file": "figures/celebrity-mando-01.webp",
+   "width": 268,
+   "height": 440,
+   "bytes": 23438,
+   "status": "real",
+   "source": "assets/portraits/celebrity-mando-01.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity mando-01: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-mando-02",
+   "file": "figures/celebrity-mando-02.webp",
+   "width": 212,
+   "height": 440,
+   "bytes": 29258,
+   "status": "real",
+   "source": "assets/portraits/celebrity-mando-02.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity mando-02: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-mando-03",
+   "file": "figures/celebrity-mando-03.webp",
+   "width": 282,
+   "height": 440,
+   "bytes": 35818,
+   "status": "real",
+   "source": "assets/portraits/celebrity-mando-03.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity mando-03: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-marvel-01",
+   "file": "figures/celebrity-marvel-01.webp",
+   "width": 168,
+   "height": 440,
+   "bytes": 23664,
+   "status": "real",
+   "source": "assets/portraits/celebrity-marvel-01.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity marvel-01: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-marvel-02",
+   "file": "figures/celebrity-marvel-02.webp",
+   "width": 183,
+   "height": 440,
+   "bytes": 27380,
+   "status": "real",
+   "source": "assets/portraits/celebrity-marvel-02.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity marvel-02: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-marvel-03",
+   "file": "figures/celebrity-marvel-03.webp",
+   "width": 257,
+   "height": 440,
+   "bytes": 31644,
+   "status": "real",
+   "source": "assets/portraits/celebrity-marvel-03.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity marvel-03: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
    "id": "figure-celebrity-neutral",
    "file": "figures/celebrity-neutral.webp",
    "width": 335,
@@ -1599,6 +1665,138 @@
    "shows": "Transparent cut-out clay celebrity guest (waving, grey blazer, lanyard) walking on a neutral light-grey round base",
    "usedIn": "celebrity token walking the hall route; one neutral figure for all three celebrity colours",
    "notes": "ONE neutral figure for every celebrity colour (colours are not yet ruled). The base is neutral grey, so a colour can be shown by a CSS ring/glow, a coloured disc behind it, or a mix-blend tint; the figure itself is the same for every celebrity. Aspect 0.47."
+  },
+  {
+   "id": "figure-celebrity-rings-01",
+   "file": "figures/celebrity-rings-01.webp",
+   "width": 221,
+   "height": 440,
+   "bytes": 29584,
+   "status": "real",
+   "source": "assets/portraits/celebrity-rings-01.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity rings-01: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-rings-02",
+   "file": "figures/celebrity-rings-02.webp",
+   "width": 254,
+   "height": 440,
+   "bytes": 21058,
+   "status": "real",
+   "source": "assets/portraits/celebrity-rings-02.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity rings-02: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-rings-03",
+   "file": "figures/celebrity-rings-03.webp",
+   "width": 249,
+   "height": 440,
+   "bytes": 38628,
+   "status": "real",
+   "source": "assets/portraits/celebrity-rings-03.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity rings-03: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-star-wars-01",
+   "file": "figures/celebrity-star-wars-01.webp",
+   "width": 175,
+   "height": 440,
+   "bytes": 22130,
+   "status": "real",
+   "source": "assets/portraits/celebrity-star-wars-01.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity star-wars-01: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-star-wars-02",
+   "file": "figures/celebrity-star-wars-02.webp",
+   "width": 158,
+   "height": 440,
+   "bytes": 22326,
+   "status": "real",
+   "source": "assets/portraits/celebrity-star-wars-02.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity star-wars-02: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-star-wars-03",
+   "file": "figures/celebrity-star-wars-03.webp",
+   "width": 165,
+   "height": 440,
+   "bytes": 28136,
+   "status": "real",
+   "source": "assets/portraits/celebrity-star-wars-03.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity star-wars-03: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-tng-01",
+   "file": "figures/celebrity-tng-01.webp",
+   "width": 147,
+   "height": 440,
+   "bytes": 20266,
+   "status": "real",
+   "source": "assets/portraits/celebrity-tng-01.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity tng-01: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-tng-02",
+   "file": "figures/celebrity-tng-02.webp",
+   "width": 147,
+   "height": 440,
+   "bytes": 16424,
+   "status": "real",
+   "source": "assets/portraits/celebrity-tng-02.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity tng-02: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-tng-03",
+   "file": "figures/celebrity-tng-03.webp",
+   "width": 347,
+   "height": 440,
+   "bytes": 34662,
+   "status": "real",
+   "source": "assets/portraits/celebrity-tng-03.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity tng-03: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-who-01",
+   "file": "figures/celebrity-who-01.webp",
+   "width": 258,
+   "height": 440,
+   "bytes": 35810,
+   "status": "real",
+   "source": "assets/portraits/celebrity-who-01.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity who-01: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-who-02",
+   "file": "figures/celebrity-who-02.webp",
+   "width": 157,
+   "height": 440,
+   "bytes": 22886,
+   "status": "real",
+   "source": "assets/portraits/celebrity-who-02.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity who-02: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
+  },
+  {
+   "id": "figure-celebrity-who-03",
+   "file": "figures/celebrity-who-03.webp",
+   "width": 259,
+   "height": 440,
+   "bytes": 29694,
+   "status": "real",
+   "source": "assets/portraits/celebrity-who-03.webp (rembg cut-out)",
+   "shows": "Transparent cut-out of celebrity who-03: the full-body clay figure from its standee portrait, background removed",
+   "usedIn": "celebrity figure standing in its hall on the board"
   },
   {
    "id": "hall-artists-alley",

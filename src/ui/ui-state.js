@@ -47,7 +47,34 @@ const view = {
   routes: { on: new Set(), off: new Set() },
   /** The Hour the celebrity panel was slid to: { hour, forHour } (ignored once the Hour changes), or null. */
   nowSlide: null,
+  /** Route numbers: 'moving' | 'still', or null to follow the system's reduced-motion setting. Remembered. */
+  routeMotion: readPref('sf-route-motion', ['moving', 'still']),
 };
+
+/** A remembered choice from localStorage, or null when unset, unknown or storage is blocked. */
+function readPref(key, allowed) {
+  try {
+    const v = globalThis.localStorage ? globalThis.localStorage.getItem(key) : null;
+    return allowed.includes(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Remembers a choice (quietly does nothing when storage is blocked). */
+export function writePref(key, value) {
+  try {
+    if (globalThis.localStorage) globalThis.localStorage.setItem(key, value);
+  } catch {
+    /* private window or blocked storage: the choice lasts for this visit only */
+  }
+}
+
+/** Whether the route numbers travel along the route: the player's choice, else the system setting. */
+export function routesMove() {
+  if (view.routeMotion) return view.routeMotion === 'moving';
+  return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
 
 let counter = 0;
 

@@ -21,14 +21,134 @@ import {
   ordinal,
 } from '../engine/index.js';
 import { stepOf, kindOfKey } from './action-targets.js';
-import { art, escapeHtml, crewPiece, ICON } from './art.js';
+import { art, artSize, escapeHtml, crewPiece, celebFigureArt, ICON } from './art.js';
 
 const OWNER_WORD = { security: 'Security', photographer: 'Photographer', usher: 'Usher' };
 
-/** The grid cell centre in the route overlay's 328 x 328 viewBox. */
+/**
+ * Where a route passes through a hall, in the route overlay's 328 x 328 viewBox
+ * (each hall is 100 x 100, with 14 between halls). Horizontally the middle of the
+ * hall; vertically a little over a quarter of the way down, through the hall art,
+ * so three routes side by side (lanes at 21 / 28 / 35) all stay above the
+ * Security / Photographer spaces (y 41-55) and the queue (58+).
+ */
+const ROUTE_Y = 28;
 function centre(hall) {
   const h = HALLS.find((x) => x.id === hall);
-  return [50 + (h.col - 1) * 114, 50 + (h.row - 1) * 114];
+  return [50 + (h.col - 1) * 114, ROUTE_Y + (h.row - 1) * 114];
+}
+
+/*
+ * Where the pieces stand in a hall, in the same units (a hall is 100 x 100; the
+ * board is 100cqw = 328 units, so 1cqw = 3.28). These mirror style.css
+ * (.sf-celeb: 7.5cqw x 11cqw, bottom 9% of the art; .sf-dest: a 4.2cqw circle,
+ * top 12% of the art); change them together.
+ */
+const CELEB_LEFT = 5;      // % of the hall width, first figure
+const CELEB_STEP = 34;     // % between figures sharing a hall
+const DEST_RIGHT = 3;      // % from the right, first destination marker
+const DEST_STEP = 15;      // % between destination markers sharing a hall
+const CELEB_BOX = { w: 24.6, top: 16.7, bottom: 55.5 };
+const DEST_BOX = { w: 13.8, top: 7, bottom: 20.8 };
+
+/**
+ * Gaps cut out of the route lines so a line passes behind a celebrity figure or
+ * a destination chair instead of across it. Rectangles in overlay units.
+ */
+function routeHoles(figures, hideMarkers) {
+  const holes = [];
+  for (const h of HALLS) {
+    const x0 = (h.col - 1) * 114;
+    const y0 = (h.row - 1) * 114;
+    // the hall's name sign, just inside the top of the hall: 58% wide, y 1-11; the
+    // Entrance plate is 70% wide and taller, y 1-16
+    if (h.id === 'entrance') holes.push([x0 + 14, y0 - 0.5, 72, 18]);
+    else holes.push([x0 + 20, y0 - 0.5, 60, 13]);
+    // the Security and Photographer spaces (bottom right of the art: x 67-97, y 42-56)
+    holes.push([x0 + 65.5, y0 + 40.5, 33, 17]);
+    figures.filter((f) => f.figure === h.id).forEach((f, i) => {
+      const left = x0 + CELEB_LEFT + i * CELEB_STEP;
+      const size = artSize(celebFigureArt(celebrityCard(f.card)));
+      const height = CELEB_BOX.bottom - CELEB_BOX.top;
+      const imgH = 36.1; // the figure image, without the disc under it
+      const w = size ? Math.min(CELEB_BOX.w * 1.5, (imgH * size[0]) / size[1]) : CELEB_BOX.w;
+      const cx = left + CELEB_BOX.w / 2;
+      holes.push([cx - w / 2 - 1.5, y0 + CELEB_BOX.top - 1.5, w + 3, height + 1.5]);
+      // the name plate under the figure (centred, about 35 wide, y 52-59)
+      holes.push([cx - 19, y0 + 51, 38, 9.5]);
+    });
+    if (hideMarkers) continue;
+    figures.filter((f) => f.marker === h.id).forEach((f, i) => {
+      const right = x0 + 100 - (DEST_RIGHT + i * DEST_STEP);
+      holes.push([right - DEST_BOX.w - 1.2, y0 + DEST_BOX.top - 1.2, DEST_BOX.w + 2.4, DEST_BOX.w + 2.4, DEST_BOX.w / 2 + 1.2]);
+    });
+  }
+  // the Usher space on each rope, halfway between the two hall centres (11.8 units across)
+  for (const r of ROPES) {
+    const [a, b] = r.halls.map((id) => HALLS.find((x) => x.id === id));
+    const cx = 50 + ((a.col + b.col) / 2 - 1) * 114;
+    const cy = 50 + ((a.row + b.row) / 2 - 1) * 114;
+    holes.push([cx - 8, cy - 8, 16, 16, 8]);
+  }
+  return holes;
+}
+
+/** The point `dist` along a polyline. */
+function pointAt(pts, dist) {
+  let left = dist;
+  for (let i = 1; i < pts.length; i += 1) {
+    const [ax, ay] = pts[i - 1];
+    const [bx, by] = pts[i];
+    const seg = Math.hypot(bx - ax, by - ay);
+    if (left <= seg || i === pts.length - 1) {
+      const t = seg ? Math.min(1, left / seg) : 0;
+      return [ax + (bx - ax) * t, ay + (by - ay) * t];
+    }
+    left -= seg;
+  }
+  return pts[0];
+}
+
+function polyLength(pts) {
+  let len = 0;
+  for (let i = 1; i < pts.length; i += 1) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  return len;
+}
+
+const TOKEN_GAP = 28;     // viewBox units between number discs ("marching ants")
+const TOKEN_SPEED = 22;   // viewBox units per second
+const LANE = 7;           // viewBox units between side-by-side routes
+
+/**
+ * The number discs that travel along a route (the celebrity's Hour, or a plain
+ * disc when there is none). Evenly spaced and staggered so the stream is steady;
+ * still, evenly spaced discs when `animate` is off (Settings > Route numbers,
+ * which follows the system's reduced-motion setting until the player picks).
+ */
+function routeTokens(pts, label, animate) {
+  const len = polyLength(pts);
+  if (len < 1) return '';
+  const n = Math.max(1, Math.round(len / TOKEN_GAP));
+  const text = label ? `<text class="sf-route__tokentext" text-anchor="middle" dominant-baseline="central">${escapeHtml(label)}</text>` : '';
+  const disc = `<circle class="sf-route__tokendisc" r="${label ? 4.4 : 2.6}"/>${text}`;
+  if (!animate) {
+    const out = [];
+    for (let i = 1; i < n; i += 1) {
+      const [x, y] = pointAt(pts, (len * i) / n);
+      out.push(`<g class="sf-route__token" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${disc}</g>`);
+    }
+    return out.join('');
+  }
+  const dur = (len / TOKEN_SPEED).toFixed(2);
+  const path = `M${pts.map((p) => p.join(' ')).join(' L')}`;
+  const out = [];
+  for (let i = 0; i < n; i += 1) {
+    const begin = `-${((len / TOKEN_SPEED) * i / n).toFixed(2)}s`;
+    out.push(`<g class="sf-route__token" opacity="0">${disc}
+        <animateMotion dur="${dur}s" begin="${begin}" repeatCount="indefinite" calcMode="paced" path="${path}"/>
+        <animate attributeName="opacity" dur="${dur}s" begin="${begin}" repeatCount="indefinite" values="0;1;1;0" keyTimes="0;0.06;0.9;1"/></g>`);
+  }
+  return out.join('');
 }
 
 /**
@@ -121,6 +241,7 @@ function hallHtml(state, h, ctx) {
   here.forEach((f, i) => {
     const card = celebrityCard(f.card);
     const classes = ['sf-celeb', `sf-cc--${f.colour}`];
+    // keep in step with routeHoles(), which leaves a gap in the route line here
     if (ctx.walkingCard === f.card) classes.push('is-walking', 'is-now');
     const ckey = `celeb:${f.card}`;
     const ccls = classer(ckey);
@@ -133,16 +254,15 @@ function hallHtml(state, h, ctx) {
       : `${targetAttrs(ckey, ccls, '')} tabindex="0" role="button" aria-pressed="${shown}" aria-label="${escapeHtml(`${card.name}, Hour ${f.hour}: ${shown ? 'hide' : 'show'} route`)}"`;
     const tip = interactive(ccls) ? `${card.name} (Hour ${f.hour})` : `${card.name} (Hour ${f.hour}) - click to ${shown ? 'hide' : 'show'} the route`;
     pieces.push(
-      `<div class="${classes.join(' ')}" style="left:${5 + i * 34}%" data-route-toggle="${escapeHtml(f.card)}"${toggle} title="${escapeHtml(tip)}">
-        ${art('figure-celebrity-neutral', { cls: 'sf-celeb__figure', alt: '' })}
-        ${art(card.portrait, { cls: 'sf-celeb__medallion', alt: card.name })}
-        <span class="sf-celeb__symbol"></span></div>`,
+      `<div class="${classes.join(' ')}" style="left:${CELEB_LEFT + i * CELEB_STEP}%" data-route-toggle="${escapeHtml(f.card)}"${toggle} title="${escapeHtml(tip)}">
+        ${art(celebFigureArt(card), { cls: 'sf-celeb__figure', alt: card.name })}
+        <span class="sf-celeb__name"><span class="sf-celeb__hour">${f.hour}</span><span class="sf-celeb__symbol"></span>${escapeHtml(card.name)}</span></div>`,
     );
   });
   figures.filter((f) => f.marker === h.id && !ctx.hideMarkers).forEach((f, i) => {
     const card = celebrityCard(f.card);
     pieces.push(
-      `<div class="sf-dest sf-dest--${f.colour}" style="right:${3 + i * 26}%" title="${escapeHtml(`Destination of ${card.name} (Hour ${f.hour})`)}"><span class="sf-dest__hour">Hour ${f.hour}</span></div>`,
+      `<div class="sf-dest sf-cc--${f.colour}" style="right:${DEST_RIGHT + i * DEST_STEP}%" title="${escapeHtml(`Destination of ${card.name} (Hour ${f.hour})`)}"><span class="sf-dest__hour">${f.hour}</span></div>`,
     );
   });
 
@@ -176,16 +296,28 @@ function ropeHtml(state, r, classer) {
 }
 
 /**
- * The route overlay for celebrities: a dotted line in the celebrity colour,
- * the walked part faded, a start ring, a destination dot with a tick.
- * @param {{ card: string, colour: string, doneTo?: number, preview?: boolean }[]} routes
+ * The route overlay for celebrities: a solid line in the celebrity colour with a
+ * white and dark edge, the celebrity's Hour number travelling along it, the walked
+ * part faded and a small dot where it ends. There are no start or finish badges:
+ * the celebrity figure (its name plate carries the Hour) marks the start and the
+ * numbered destination marker in the hall marks the finish. All of it is drawn
+ * behind the pieces (see routeHoles), so a route never covers a figure or a space.
+ * Each route's group carries data-route-hour, for the tests.
+ * @param {{ card: string, colour: string, hour?: number, tag?: number, doneTo?: number, preview?: boolean }[]} routes
  */
-export function routeSvg(routes) {
+export function routeSvg(routes, holes = [], animate = true) {
   if (!routes.length) return '';
-  // Two layers: every route's line first, then every start and end circle on top, so
-  // one route's line never hides another route's Hour number.
+  // Three layers: every route's line, then every end dot, then every moving number.
   const lines = [];
-  const marks = [];
+  const ends = [];
+  const tokens = [];
+  // Lanes: each route shown gets its own lane, in Hour order, LANE apart and centred.
+  // The whole route shifts diagonally by its lane offset, which moves horizontal
+  // stretches up/down and vertical stretches left/right by the same amount, so two
+  // routes sharing a stretch run side by side and never on top of each other.
+  const byHour = routes.map((r, i) => ({ i, key: [r.hour ?? r.tag ?? 9, r.card] }))
+    .sort((a, b) => a.key[0] - b.key[0] || String(a.key[1]).localeCompare(String(b.key[1])));
+  const lane = new Map(byHour.map((x, k) => [x.i, (k - (routes.length - 1) / 2) * LANE]));
   routes.forEach((r, n) => {
     const card = celebrityCard(r.card);
     const pts = card.route.map(centre);
@@ -193,24 +325,29 @@ export function routeSvg(routes) {
     const done = r.doneTo > 0 ? `<path class="sf-route__casing" d="${d(pts.slice(0, r.doneTo + 1))}"/><path class="sf-route__done" d="${d(pts.slice(0, r.doneTo + 1))}"/>` : '';
     const rest = pts.slice(r.doneTo || 0);
     const [ex, ey] = pts[pts.length - 1];
-    const [sx, sy] = pts[0];
-    const off = ((n % 4) - 1.5) * 4; // up to four routes side by side do not lie exactly on each other
-    const cls = `sf-cc--${r.colour}${r.preview ? ' sf-route--preview' : ''}${r.hour ? ' sf-route--numbered' : ''}`;
-    const hourLabel = r.hour ? `<text class="sf-route__hour" x="${sx}" y="${sy}" text-anchor="middle" dominant-baseline="central">${r.hour}</text>` : '';
-    lines.push(`<g class="${cls}" transform="translate(${off} ${off})">
-        <defs><marker id="arr-${n}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--cc)"/></marker></defs>
+    const off = lane.get(n);
+    const cls = `sf-cc--${r.colour}${r.preview ? ' sf-route--preview' : ''}`;
+    const hourAttr = r.hour ? ` data-route-hour="${r.hour}"` : '';
+    lines.push(`<g class="${cls}" transform="translate(${off} ${off})"${hourAttr}>
         ${done}
+        <path class="sf-route__edge" d="${d(rest)}"/>
         <path class="sf-route__casing" d="${d(rest)}"/>
-        <path class="sf-route__line ${r.preview ? '' : 'sf-route__march'}" d="${d(rest)}" marker-mid="url(#arr-${n})"/>
+        <path class="sf-route__line" d="${d(rest)}"/>
       </g>`);
-    marks.push(`<g class="${cls}" transform="translate(${off} ${off})">
-        <circle class="sf-route__start" cx="${sx}" cy="${sy}" r="7"/>
-        <circle class="sf-route__end" cx="${ex}" cy="${ey}" r="9"/>
-        <path d="M${ex - 4} ${ey} l3 3 l6 -6" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        ${hourLabel}
-      </g>`);
+    ends.push(`<g class="${cls}" transform="translate(${off} ${off})"><circle class="sf-route__end" cx="${ex}" cy="${ey}" r="3.4"/></g>`);
+    tokens.push(`<g class="${cls}" transform="translate(${off} ${off})">${routeTokens(rest, r.hour ?? r.tag ?? '', animate)}</g>`);
   });
-  return `<svg class="sf-board__overlay" viewBox="0 0 328 328" aria-hidden="true">${lines.join('')}${marks.join('')}</svg>`;
+  let mask = '';
+  let masked = '';
+  if (holes.length) {
+    // a fixed id: the page holds one board, and an unchanged board must render to the
+    // same markup (main.js skips the redraw when nothing changed)
+    const id = 'sf-route-mask';
+    const cuts = holes.map(([x, y, w, h, rx = 4]) => `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${rx}" fill="#000"/>`).join('');
+    mask = `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-20" y="-20" width="368" height="368"><rect x="-20" y="-20" width="368" height="368" fill="#fff"/>${cuts}</mask></defs>`;
+    masked = ` mask="url(#${id})"`;
+  }
+  return `<svg class="sf-board__overlay" viewBox="0 0 328 328" aria-hidden="true">${mask}<g${masked}>${lines.join('')}${ends.join('')}${tokens.join('')}</g></svg>`;
 }
 
 /**
@@ -220,10 +357,11 @@ export function routeSvg(routes) {
  */
 export function renderBoard(state, ctx) {
   const full = { ...ctx, figures: figuresOnBoard(state), shownRoutes: new Set((ctx.routes || []).map((r) => r.card)) };
+  const holes = ctx.routes && ctx.routes.length ? routeHoles(full.figures, ctx.hideMarkers) : [];
   return `<div class="sf-board${ctx.dim ? ' is-dimmed' : ''}"><div class="sf-board__grid">
     ${HALLS.map((h) => hallHtml(state, h, full)).join('')}
     ${ROPES.map((r) => ropeHtml(state, r, ctx.classer)).join('')}
-    ${routeSvg(ctx.routes)}
+    ${routeSvg(ctx.routes || [], holes, ctx.animateRoutes !== false)}
   </div></div>`;
 }
 
